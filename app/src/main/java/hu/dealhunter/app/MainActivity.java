@@ -7,7 +7,6 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -30,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends Activity {
     private LinearLayout rulesContainer, resultsContainer;
-    private EditText queryInput, maxPriceInput, apifyTokenInput, locationInput;
+    private EditText queryInput, maxPriceInput, locationInput;
     private CheckBox autoScanCheck;
     private TextView statusText;
     private Button scanButton;
@@ -47,7 +46,6 @@ public class MainActivity extends Activity {
 
         queryInput=findViewById(R.id.queryInput);
         maxPriceInput=findViewById(R.id.maxPriceInput);
-        apifyTokenInput=findViewById(R.id.apifyTokenInput);
         locationInput=findViewById(R.id.locationInput);
         autoScanCheck=findViewById(R.id.autoScanCheck);
         statusText=findViewById(R.id.statusText);
@@ -56,10 +54,10 @@ public class MainActivity extends Activity {
         resultsContainer=findViewById(R.id.resultsContainer);
 
         rules.addAll(MarketScanner.loadRules(this));
-        apifyTokenInput.setText(prefs.getString(MarketScanner.KEY_APIFY_TOKEN, ""));
         locationInput.setText(prefs.getString(MarketScanner.KEY_LOCATION, "budapest"));
         autoScanCheck.setChecked(prefs.getBoolean(MarketScanner.KEY_AUTO, true));
 
+        findViewById(R.id.facebookLoginButton).setOnClickListener(v -> startActivity(new Intent(this, FacebookLoginActivity.class)));
         findViewById(R.id.addRuleButton).setOnClickListener(v -> addRule());
         findViewById(R.id.saveSettingsButton).setOnClickListener(v -> saveSettings(true));
         scanButton.setOnClickListener(v -> runLiveScan());
@@ -73,8 +71,7 @@ public class MainActivity extends Activity {
         renderDeals();
         requestNotifications();
         scheduleAutoScan(autoScanCheck.isChecked());
-        String last = prefs.getString("last_scan_status", "");
-        statusText.setText(last.isEmpty() ? "v0.3 • Valós HardverApró + Apify Marketplace" : "v0.3 • " + last);
+        statusText.setText("v0.4 • Facebook bejelentkezés elérhető • Apify nélkül");
     }
 
     private void addRule(){
@@ -88,38 +85,35 @@ public class MainActivity extends Activity {
     }
 
     private void saveSettings(boolean showToast){
-        String token=apifyTokenInput.getText().toString().trim();
         String location=locationInput.getText().toString().trim();
         if(location.isEmpty()) location="budapest";
         prefs.edit()
-                .putString(MarketScanner.KEY_APIFY_TOKEN, token)
+                .remove(MarketScanner.KEY_APIFY_TOKEN)
                 .putString(MarketScanner.KEY_LOCATION, location)
                 .putBoolean(MarketScanner.KEY_AUTO, autoScanCheck.isChecked())
                 .apply();
         MarketScanner.saveRules(this, rules);
         scheduleAutoScan(autoScanCheck.isChecked());
-        if(showToast) Toast.makeText(this, token.isEmpty()?"Mentve. Marketplace-hez még Apify token kell.":"Beállítások mentve.",Toast.LENGTH_LONG).show();
+        if(showToast) Toast.makeText(this, "Beállítások mentve.",Toast.LENGTH_SHORT).show();
     }
 
     private void runLiveScan(){
         saveSettings(false);
         scanButton.setEnabled(false);
         scanButton.setText("Keresés folyamatban…");
-        statusText.setText("Valós hirdetések lekérése…");
-        final String token=apifyTokenInput.getText().toString().trim();
+        statusText.setText("HardverApró hirdetések lekérése…");
         final String location=locationInput.getText().toString().trim();
         final List<MarketScanner.SearchRule> snapshot=new ArrayList<>(rules);
 
         new Thread(() -> {
-            MarketScanner.ScanResult result = MarketScanner.scan(this, snapshot, token, location);
+            MarketScanner.ScanResult result = MarketScanner.scan(this, snapshot, "", location);
             runOnUiThread(() -> {
                 deals.clear(); deals.addAll(result.deals);
                 renderDeals();
-                statusText.setText("v0.3 • " + result.status);
-                prefs.edit().putString("last_scan_status", result.status).apply();
+                statusText.setText("v0.4 • " + result.status.replace(" • Marketplace token hiányzik", "") + " • Facebook login külön ablakban");
                 scanButton.setEnabled(true);
-                scanButton.setText("Valós keresés most");
-                if(result.deals.isEmpty()) Toast.makeText(this,"Nem jött találat. Ellenőrizd a keresést és az API tokent.",Toast.LENGTH_LONG).show();
+                scanButton.setText("HardverApró keresés most");
+                if(result.deals.isEmpty()) Toast.makeText(this,"Most nem jött HardverApró találat.",Toast.LENGTH_LONG).show();
             });
         }).start();
     }
@@ -155,7 +149,7 @@ public class MainActivity extends Activity {
     private void renderDeals(){
         resultsContainer.removeAllViews();
         if(deals.isEmpty()){
-            TextView empty=tv("Nyomd meg a „Valós keresés most” gombot. A teszt/mock találatok ki lettek kapcsolva.",14,Color.LTGRAY);
+            TextView empty=tv("A HardverApró találatok itt jelennek meg. A Facebookhoz használd a bejelentkezés gombot.",14,Color.LTGRAY);
             empty.setPadding(0,dp(10),0,0); resultsContainer.addView(empty); return;
         }
         for(MarketScanner.Deal d:deals){
