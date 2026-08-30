@@ -4,8 +4,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:allowBackup="true"
-        android:label="Deal Hunter"
+        android:label="Scrapefinder"
+        android:usesCleartextTraffic="false"
         android:theme="@style/AppTheme">
+        <activity android:name=".FacebookLoginActivity" android:exported="false" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
