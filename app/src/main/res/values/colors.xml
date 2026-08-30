@@ -1,8 +1,12 @@
 <resources>
-    <color name="bg">#101318</color>
-    <color name="card">#1B2028</color>
-    <color name="text">#F4F7FB</color>
-    <color name="muted">#AEB7C2</color>
-    <color name="accent">#54D08B</color>
+    <color name="bg">#0C1117</color>
+    <color name="card">#151B23</color>
+    <color name="card2">#11171E</color>
+    <color name="stroke">#28313C</color>
+    <color name="text">#F5F7FA</color>
+    <color name="muted">#AEB6C2</color>
+    <color name="accent">#49D17D</color>
+    <color name="accent_dark">#1D8B47</color>
+    <color name="facebook">#1877F2</color>
     <color name="danger">#FF6868</color>
 </resources>
