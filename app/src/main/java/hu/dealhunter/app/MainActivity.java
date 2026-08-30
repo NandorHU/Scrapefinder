@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -70,7 +71,7 @@ public class MainActivity extends Activity {
         renderDeals();
         requestNotifications();
         scheduleAutoScan(autoScanCheck.isChecked());
-        statusText.setText("v0.5 • Facebook login • alkalmazáson belüli frissítés");
+        statusText.setText("v0.6 • új UI • alkalmazáson belüli frissítés");
         AppUpdater.checkForUpdate(this, false);
     }
 
@@ -87,11 +88,8 @@ public class MainActivity extends Activity {
     private void saveSettings(boolean showToast){
         String location=locationInput.getText().toString().trim();
         if(location.isEmpty()) location="budapest";
-        prefs.edit()
-                .remove(MarketScanner.KEY_APIFY_TOKEN)
-                .putString(MarketScanner.KEY_LOCATION, location)
-                .putBoolean(MarketScanner.KEY_AUTO, autoScanCheck.isChecked())
-                .apply();
+        prefs.edit().remove(MarketScanner.KEY_APIFY_TOKEN).putString(MarketScanner.KEY_LOCATION, location)
+                .putBoolean(MarketScanner.KEY_AUTO, autoScanCheck.isChecked()).apply();
         MarketScanner.saveRules(this, rules);
         scheduleAutoScan(autoScanCheck.isChecked());
         if(showToast) Toast.makeText(this, "Beállítások mentve.",Toast.LENGTH_SHORT).show();
@@ -100,7 +98,7 @@ public class MainActivity extends Activity {
     private void runLiveScan(){
         saveSettings(false);
         scanButton.setEnabled(false);
-        scanButton.setText("Keresés folyamatban…");
+        scanButton.setText("⌕  Keresés folyamatban…");
         statusText.setText("HardverApró hirdetések lekérése…");
         final String location=locationInput.getText().toString().trim();
         final List<MarketScanner.SearchRule> snapshot=new ArrayList<>(rules);
@@ -110,9 +108,9 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 deals.clear(); deals.addAll(result.deals);
                 renderDeals();
-                statusText.setText("v0.5 • " + result.status.replace(" • Marketplace token hiányzik", "") + " • Facebook login külön ablakban");
+                statusText.setText("v0.6 • " + result.status.replace(" • Marketplace token hiányzik", ""));
                 scanButton.setEnabled(true);
-                scanButton.setText("HardverApró keresés most");
+                scanButton.setText("⌕  HardverApró keresés most");
                 if(result.deals.isEmpty()) Toast.makeText(this,"Most nem jött HardverApró találat.",Toast.LENGTH_LONG).show();
             });
         }).start();
@@ -127,16 +125,44 @@ public class MainActivity extends Activity {
         wm.enqueueUniquePeriodicWork("ScrapefinderScan", ExistingPeriodicWorkPolicy.UPDATE, request);
     }
 
-    private TextView tv(String text,int size,int color){ TextView t=new TextView(this); t.setText(text); t.setTextSize(size); t.setTextColor(color); return t; }
-    private LinearLayout card(){ LinearLayout c=new LinearLayout(this); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(16),dp(14),dp(16),dp(14)); c.setBackgroundResource(R.drawable.card_bg); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,dp(10),0,0); c.setLayoutParams(lp); return c; }
+    private TextView tv(String text,int size,int color){
+        TextView t=new TextView(this); t.setText(text); t.setTextSize(size); t.setTextColor(color); return t;
+    }
+
+    private LinearLayout card(){
+        LinearLayout c=new LinearLayout(this); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(16),dp(14),dp(16),dp(14));
+        c.setBackgroundResource(R.drawable.card_bg);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,dp(10),0,0); c.setLayoutParams(lp); return c;
+    }
 
     private void renderRules(){
         rulesContainer.removeAllViews();
         for(MarketScanner.SearchRule r:new ArrayList<>(rules)){
             LinearLayout c=card();
-            c.addView(tv(r.query,16,Color.WHITE));
-            c.addView(tv(r.maxPrice>0?"Max: "+formatFt(r.maxPrice):"Nincs árkorlát",13,Color.LTGRAY));
-            c.setOnLongClickListener(v->{ rules.remove(r); MarketScanner.saveRules(this,rules); renderRules(); return true; });
+            c.setOrientation(LinearLayout.HORIZONTAL);
+            c.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView dot=tv("●",18,Color.rgb(73,209,125));
+            LinearLayout.LayoutParams dotLp=new LinearLayout.LayoutParams(dp(28),-2);
+            dot.setLayoutParams(dotLp);
+            c.addView(dot);
+
+            LinearLayout info=new LinearLayout(this);
+            info.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams infoLp=new LinearLayout.LayoutParams(0,-2,1f);
+            info.setLayoutParams(infoLp);
+            TextView title=tv(r.query,16,Color.WHITE); title.setTypeface(null, android.graphics.Typeface.BOLD);
+            info.addView(title);
+            info.addView(tv(r.maxPrice>0?"Max: "+formatFt(r.maxPrice):"Nincs árkorlát",13,Color.LTGRAY));
+            c.addView(info);
+
+            TextView menu=tv("⋮",28,Color.LTGRAY);
+            menu.setGravity(Gravity.CENTER);
+            menu.setPadding(dp(10),0,0,0);
+            c.addView(menu,new LinearLayout.LayoutParams(dp(36),dp(48)));
+
+            android.view.View.OnLongClickListener remove=v->{ rules.remove(r); MarketScanner.saveRules(this,rules); renderRules(); return true; };
+            c.setOnLongClickListener(remove); menu.setOnLongClickListener(remove);
             rulesContainer.addView(c);
         }
     }
@@ -144,15 +170,15 @@ public class MainActivity extends Activity {
     private void renderDeals(){
         resultsContainer.removeAllViews();
         if(deals.isEmpty()){
-            TextView empty=tv("A HardverApró találatok itt jelennek meg. A Facebookhoz használd a bejelentkezés gombot.",14,Color.LTGRAY);
+            TextView empty=tv("⌕  A találatok itt jelennek meg. A Facebookhoz használd a bejelentkezés gombot.",14,Color.LTGRAY);
             empty.setPadding(0,dp(10),0,0); resultsContainer.addView(empty); return;
         }
         for(MarketScanner.Deal d:deals){
             LinearLayout c=card();
-            c.addView(tv((d.score>=85?"🔥 ":"")+d.score+"/100",16,d.score>=85?Color.rgb(84,208,139):Color.LTGRAY));
-            c.addView(tv(d.title,17,Color.WHITE));
+            c.addView(tv((d.score>=85?"●  ":"")+d.score+"/100",16,d.score>=85?Color.rgb(73,209,125):Color.LTGRAY));
+            TextView title=tv(d.title,17,Color.WHITE); title.setTypeface(null, android.graphics.Typeface.BOLD); c.addView(title);
             c.addView(tv(formatFt(d.price)+" • "+d.source,14,Color.LTGRAY));
-            if(d.location!=null&&!d.location.isEmpty()) c.addView(tv(d.location,13,Color.LTGRAY));
+            if(d.location!=null&&!d.location.isEmpty()) c.addView(tv("⌖  "+d.location,13,Color.LTGRAY));
             c.addView(tv("Hiba: "+d.issue,13,Color.LTGRAY));
             Button open=new Button(this); open.setText("Hirdetés megnyitása");
             open.setOnClickListener(v->{ try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(d.url))); }catch(Exception ignored){} });
