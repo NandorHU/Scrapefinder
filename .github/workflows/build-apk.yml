@@ -32,23 +32,23 @@ jobs:
           gradle-version: '8.11.1'
 
       - name: Restore stable debug signing key
-        uses: actions/cache@v4
+        id: signing-cache
+        uses: actions/cache/restore@v4
         with:
           path: ~/.android/debug.keystore
           key: scrapefinder-debug-signing-v1
 
-      - name: Create signing key if missing
+      - name: Verify stable signing key
+        shell: bash
         run: |
-          mkdir -p ~/.android
           if [ ! -f ~/.android/debug.keystore ]; then
-            keytool -genkeypair -v \
-              -keystore ~/.android/debug.keystore \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -dname "CN=Scrapefinder Debug,O=Scrapefinder,C=HU" \
-              -keyalg RSA -keysize 2048 -validity 10000
+            echo "ERROR: Stable Scrapefinder signing key is missing. Refusing to generate a new key because that would break APK updates." >&2
+            exit 1
           fi
+          keytool -list -v \
+            -keystore ~/.android/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey | grep -E "SHA256:|Owner:" || true
 
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
