@@ -5,7 +5,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.work.Worker;
@@ -30,6 +29,7 @@ public class ScanWorker extends Worker {
         List<MarketScanner.SearchRule> rules = MarketScanner.loadRules(c);
         String token = p.getString(MarketScanner.KEY_APIFY_TOKEN, "");
         String location = p.getString(MarketScanner.KEY_LOCATION, "budapest");
+        Set<String> blacklist = new HashSet<>(p.getStringSet(MainActivity.KEY_BLACKLIST, new HashSet<>()));
 
         try {
             MarketScanner.ScanResult result = MarketScanner.scan(c, rules, token, location);
@@ -37,6 +37,8 @@ public class ScanWorker extends Worker {
             Set<String> newSeen = new HashSet<>(oldSeen);
             int sent = 0;
             for (MarketScanner.Deal d : result.deals) {
+                boolean blocked = blacklist.contains(d.id) || (d.url != null && blacklist.contains(d.url));
+                if (blocked) continue;
                 if (!oldSeen.contains(d.id) && d.score >= 70 && sent < 5) {
                     notifyDeal(c, d);
                     sent++;
@@ -47,6 +49,8 @@ public class ScanWorker extends Worker {
                 newSeen.clear();
                 int keep = 0;
                 for (MarketScanner.Deal d : result.deals) {
+                    boolean blocked = blacklist.contains(d.id) || (d.url != null && blacklist.contains(d.url));
+                    if (blocked) continue;
                     newSeen.add(d.id);
                     if (++keep >= 250) break;
                 }
