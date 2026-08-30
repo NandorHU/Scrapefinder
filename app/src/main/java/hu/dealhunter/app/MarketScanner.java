@@ -95,25 +95,26 @@ public final class MarketScanner {
         String html = httpGet(url, null);
         List<Deal> out = new ArrayList<>();
 
-        Pattern linkPattern = Pattern.compile("<a[^>]+href=\\\"([^\\\"]*/apro/[^\\\"]+)\\\"[^>]*>(.*?)</a>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+        // HardverApró sima idézőjeleket használ a href attribútumban; a korábbi regex hibásan escape-elt idézőjelet keresett.
+        Pattern linkPattern = Pattern.compile("<a[^>]+href\\s*=\\s*[\\\"']([^\\\"']*/apro/[^\\\"']+)[\\\"'][^>]*>(.*?)</a>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
         Matcher m = linkPattern.matcher(html);
         int guard = 0;
-        while (m.find() && guard++ < 80) {
+        while (m.find() && guard++ < 140) {
             String href = decodeEntities(m.group(1));
             String title = cleanHtml(m.group(2));
             if (title.length() < 3 || isNoiseTitle(title)) continue;
             if (!href.startsWith("http")) href = "https://hardverapro.hu" + (href.startsWith("/") ? href : "/" + href);
 
-            int from = Math.max(0, m.start() - 300);
-            int to = Math.min(html.length(), m.end() + 1600);
+            int from = Math.max(0, m.start() - 500);
+            int to = Math.min(html.length(), m.end() + 2200);
             String neighborhood = cleanHtml(html.substring(from, to));
             int price = extractFt(neighborhood);
             if (price <= 0) continue;
             if (rule.maxPrice > 0 && price > rule.maxPrice) continue;
-            if (!matchesRule(title, rule.query)) continue;
 
+            // A HardverApró saját keresője a leírásban lévő találatokat is visszaadja, ezért nem szűrünk újra kizárólag a cím alapján.
             String id = "ha:" + href.replaceAll("[?#].*$", "");
-            out.add(new Deal(id, title, price, "HardverApró", classifyIssue(title), score(title, price, rule.maxPrice), href, ""));
+            out.add(new Deal(id, title, price, "HardverApró", classifyIssue(title + " " + neighborhood), score(title + " " + neighborhood, price, rule.maxPrice), href, ""));
         }
         return out;
     }
@@ -259,8 +260,9 @@ public final class MarketScanner {
     private static String httpGet(String url, String bearer) throws Exception {
         HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
         c.setConnectTimeout(12000); c.setReadTimeout(18000); c.setRequestMethod("GET");
-        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) Scrapefinder/0.3");
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) Scrapefinder/0.7");
         c.setRequestProperty("Accept-Language", "hu-HU,hu;q=0.9,en;q=0.7");
+        c.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
         if (bearer != null) c.setRequestProperty("Authorization", "Bearer " + bearer);
         return readResponse(c);
     }
