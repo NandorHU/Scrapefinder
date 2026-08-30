@@ -50,9 +50,18 @@
             android:textColor="@color/text" android:textStyle="bold" android:textSize="18sp" android:layout_marginTop="22dp" />
         <LinearLayout android:id="@+id/resultsContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
 
-        <Button android:id="@+id/updateButton" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Build / frissítések megnyitása" android:layout_marginTop="16dp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:background="@drawable/card_bg" android:layout_marginTop="18dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Alkalmazásfrissítés" android:textColor="@color/text" android:textStyle="bold" android:textSize="18sp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Az új verziókat innen tudod ellenőrizni, letölteni és telepíteni. Nem kell számítógépről újra letölteni az APK-t."
+                android:textColor="@color/muted" android:textSize="13sp" android:layout_marginTop="6dp" />
+            <Button android:id="@+id/updateButton" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="FRISSÍTÉS KERESÉSE" android:layout_marginTop="10dp" />
+        </LinearLayout>
+
         <TextView android:id="@+id/statusText" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="v0.4 • Facebook bejelentkezés" android:textColor="@color/muted" android:gravity="center" android:layout_marginTop="18dp" android:layout_marginBottom="20dp" />
+            android:text="v0.5 • alkalmazáson belüli frissítés" android:textColor="@color/muted" android:gravity="center" android:layout_marginTop="18dp" android:layout_marginBottom="20dp" />
     </LinearLayout>
 </ScrollView>
