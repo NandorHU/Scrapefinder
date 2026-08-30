@@ -26,11 +26,15 @@ import org.json.JSONObject;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends Activity {
+    public static final String KEY_BLACKLIST = "blacklisted_deal_ids";
+
     private LinearLayout rulesContainer, resultsContainer;
     private EditText queryInput, maxPriceInput, locationInput;
     private CheckBox autoScanCheck;
@@ -76,8 +80,9 @@ public class MainActivity extends Activity {
         scheduleAutoScan(autoScanCheck.isChecked());
         updateFacebookState();
         loadFacebookResults();
+        removeBlacklistedFromDeals();
         renderDeals();
-        statusText.setText("v0.7 • HardverApró + Facebook Marketplace keresés");
+        statusText.setText("v0.9 • hirdetés feketelista");
         AppUpdater.checkForUpdate(this, false);
     }
 
@@ -86,7 +91,31 @@ public class MainActivity extends Activity {
         if(prefs==null) return;
         updateFacebookState();
         loadFacebookResults();
+        removeBlacklistedFromDeals();
         renderDeals();
+    }
+
+    private Set<String> blacklist(){
+        return new HashSet<>(prefs.getStringSet(KEY_BLACKLIST, new HashSet<>()));
+    }
+
+    private boolean isBlacklisted(MarketScanner.Deal d){
+        Set<String> blocked=blacklist();
+        return blocked.contains(d.id) || blocked.contains(d.url);
+    }
+
+    private void addToBlacklist(MarketScanner.Deal d){
+        Set<String> blocked=blacklist();
+        blocked.add(d.id);
+        if(d.url!=null && !d.url.isEmpty()) blocked.add(d.url);
+        prefs.edit().putStringSet(KEY_BLACKLIST, blocked).apply();
+        deals.remove(d);
+        renderDeals();
+        Toast.makeText(this,"Hirdetés feketelistára téve.",Toast.LENGTH_SHORT).show();
+    }
+
+    private void removeBlacklistedFromDeals(){
+        for(int i=deals.size()-1;i>=0;i--) if(isBlacklisted(deals.get(i))) deals.remove(i);
     }
 
     private void updateFacebookState(){
@@ -105,7 +134,8 @@ public class MainActivity extends Activity {
                 String url=o.optString("url","");
                 int price=o.optInt("price",0);
                 if(url.isEmpty()) continue;
-                deals.add(new MarketScanner.Deal("fb:"+url,title,price,"Marketplace","Ellenőrizendő",72,url,"Facebook Marketplace"));
+                MarketScanner.Deal d=new MarketScanner.Deal("fb:"+url,title,price,"Marketplace","Ellenőrizendő",72,url,"Facebook Marketplace");
+                if(!isBlacklisted(d)) deals.add(d);
             }
         }catch(Exception ignored){}
     }
@@ -142,8 +172,9 @@ public class MainActivity extends Activity {
             MarketScanner.ScanResult result = MarketScanner.scan(this, snapshot, "", location);
             runOnUiThread(() -> {
                 for(int i=deals.size()-1;i>=0;i--) if("HardverApró".equals(deals.get(i).source)) deals.remove(i);
-                deals.addAll(result.deals);
+                for(MarketScanner.Deal d:result.deals) if(!isBlacklisted(d)) deals.add(d);
                 loadFacebookResults();
+                removeBlacklistedFromDeals();
                 renderDeals();
                 scanButton.setEnabled(true);
                 scanButton.setText("⌕  KERESÉS MOST");
@@ -191,15 +222,29 @@ public class MainActivity extends Activity {
         if(deals.isEmpty()){
             TextView empty=tv("⌕  A találatok itt jelennek meg.",14,Color.LTGRAY); empty.setPadding(0,dp(10),0,0); resultsContainer.addView(empty); return;
         }
-        for(MarketScanner.Deal d:deals){
+        for(MarketScanner.Deal d:new ArrayList<>(deals)){
+            if(isBlacklisted(d)) continue;
             LinearLayout c=card();
             c.addView(tv((d.score>=85?"●  ":"")+d.score+"/100",16,d.score>=85?Color.rgb(73,209,125):Color.LTGRAY));
             TextView title=tv(d.title,17,Color.WHITE); title.setTypeface(null, android.graphics.Typeface.BOLD); c.addView(title);
             c.addView(tv((d.price>0?formatFt(d.price):"Ár nem olvasható")+" • "+d.source,14,Color.LTGRAY));
             if(d.location!=null&&!d.location.isEmpty()) c.addView(tv("⌖  "+d.location,13,Color.LTGRAY));
-            Button open=new Button(this); open.setText("Hirdetés megnyitása");
+
+            LinearLayout actions=new LinearLayout(this);
+            actions.setOrientation(LinearLayout.HORIZONTAL);
+            actions.setPadding(0,dp(8),0,0);
+
+            Button open=new Button(this); open.setText("MEGNYITÁS");
             open.setOnClickListener(v->{ try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(d.url))); }catch(Exception ignored){} });
-            c.addView(open); resultsContainer.addView(c);
+            actions.addView(open,new LinearLayout.LayoutParams(0,dp(52),1f));
+
+            Button block=new Button(this); block.setText("⊘ FEKETELISTA");
+            LinearLayout.LayoutParams blp=new LinearLayout.LayoutParams(0,dp(52),1f); blp.setMargins(dp(8),0,0,0);
+            block.setOnClickListener(v->addToBlacklist(d));
+            actions.addView(block,blp);
+            c.addView(actions);
+
+            resultsContainer.addView(c);
         }
     }
 
