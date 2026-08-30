@@ -95,7 +95,6 @@ public final class MarketScanner {
         String html = httpGet(url, null);
         List<Deal> out = new ArrayList<>();
 
-        // HardverApró sima idézőjeleket használ a href attribútumban; a korábbi regex hibásan escape-elt idézőjelet keresett.
         Pattern linkPattern = Pattern.compile("<a[^>]+href\\s*=\\s*[\\\"']([^\\\"']*/apro/[^\\\"']+)[\\\"'][^>]*>(.*?)</a>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
         Matcher m = linkPattern.matcher(html);
         int guard = 0;
@@ -112,11 +111,47 @@ public final class MarketScanner {
             if (price <= 0) continue;
             if (rule.maxPrice > 0 && price > rule.maxPrice) continue;
 
-            // A HardverApró saját keresője a leírásban lévő találatokat is visszaadja, ezért nem szűrünk újra kizárólag a cím alapján.
+            // A modell/termék azonosító kulcsszavaknak a címben kell lenniük.
+            // A hibára utaló szavak továbbra is lehetnek a címben vagy a leírásban.
+            // Példa: "PS5 Slim" cím + "nem kapcsol be" leírás = találat,
+            // de egy általános szervizhirdetés, amely csak a leírásban említi a PS5-öt, kiesik.
+            if (!hardverAproRelevant(title, neighborhood, rule.query)) continue;
+
             String id = "ha:" + href.replaceAll("[?#].*$", "");
-            out.add(new Deal(id, title, price, "HardverApró", classifyIssue(title + " " + neighborhood), score(title + " " + neighborhood, price, rule.maxPrice), href, ""));
+            String searchable = title + " " + neighborhood;
+            out.add(new Deal(id, title, price, "HardverApró", classifyIssue(searchable), score(searchable, price, rule.maxPrice), href, ""));
         }
         return out;
+    }
+
+    private static boolean hardverAproRelevant(String title, String neighborhood, String query) {
+        String t = normalize(title);
+        String q = normalize(query);
+        if (t.isEmpty() || q.isEmpty()) return false;
+
+        String[] parts = q.split("\\s+");
+        int identityCount = 0;
+        for (String p : parts) {
+            if (p.length() < 3 || isFaultQueryWord(p)) continue;
+            identityCount++;
+            if (!t.contains(p)) return false;
+        }
+
+        // Ha a keresés csak hibaszavakból állna, ne blokkoljuk teljesen.
+        if (identityCount == 0) {
+            String all = normalize(title + " " + neighborhood);
+            return matchesRule(all, query);
+        }
+        return true;
+    }
+
+    private static boolean isFaultQueryWord(String p) {
+        return p.equals("hibas") || p.equals("hiba") || p.equals("rossz") ||
+                p.equals("nem") || p.equals("kapcsol") || p.equals("indul") ||
+                p.equals("mukodik") || p.equals("tolti") || p.equals("tolt") ||
+                p.equals("kep") || p.equals("hdmi") || p.equals("donor") ||
+                p.equals("alkatresz") || p.equals("beazott") || p.equals("vizes") ||
+                p.equals("pittyen") || p.equals("beep") || p.equals("hibasodott");
     }
 
     private static List<Deal> scanMarketplace(List<SearchRule> rules, String token, String locationSlug) throws Exception {
@@ -260,7 +295,7 @@ public final class MarketScanner {
     private static String httpGet(String url, String bearer) throws Exception {
         HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
         c.setConnectTimeout(12000); c.setReadTimeout(18000); c.setRequestMethod("GET");
-        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) Scrapefinder/0.7");
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) Scrapefinder/0.11");
         c.setRequestProperty("Accept-Language", "hu-HU,hu;q=0.9,en;q=0.7");
         c.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
         if (bearer != null) c.setRequestProperty("Authorization", "Bearer " + bearer);
