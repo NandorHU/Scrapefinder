@@ -7,7 +7,6 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -61,7 +60,7 @@ public class MainActivity extends Activity {
         findViewById(R.id.addRuleButton).setOnClickListener(v -> addRule());
         findViewById(R.id.saveSettingsButton).setOnClickListener(v -> saveSettings(true));
         scanButton.setOnClickListener(v -> runLiveScan());
-        findViewById(R.id.updateButton).setOnClickListener(v -> openUpdates());
+        findViewById(R.id.updateButton).setOnClickListener(v -> AppUpdater.checkForUpdate(this, true));
         autoScanCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
             prefs.edit().putBoolean(MarketScanner.KEY_AUTO, isChecked).apply();
             scheduleAutoScan(isChecked);
@@ -71,7 +70,8 @@ public class MainActivity extends Activity {
         renderDeals();
         requestNotifications();
         scheduleAutoScan(autoScanCheck.isChecked());
-        statusText.setText("v0.4 • Facebook bejelentkezés elérhető • Apify nélkül");
+        statusText.setText("v0.5 • Facebook login • alkalmazáson belüli frissítés");
+        AppUpdater.checkForUpdate(this, false);
     }
 
     private void addRule(){
@@ -110,7 +110,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 deals.clear(); deals.addAll(result.deals);
                 renderDeals();
-                statusText.setText("v0.4 • " + result.status.replace(" • Marketplace token hiányzik", "") + " • Facebook login külön ablakban");
+                statusText.setText("v0.5 • " + result.status.replace(" • Marketplace token hiányzik", "") + " • Facebook login külön ablakban");
                 scanButton.setEnabled(true);
                 scanButton.setText("HardverApró keresés most");
                 if(result.deals.isEmpty()) Toast.makeText(this,"Most nem jött HardverApró találat.",Toast.LENGTH_LONG).show();
@@ -125,11 +125,6 @@ public class MainActivity extends Activity {
         PeriodicWorkRequest request=new PeriodicWorkRequest.Builder(ScanWorker.class,15, TimeUnit.MINUTES)
                 .setConstraints(constraints).build();
         wm.enqueueUniquePeriodicWork("ScrapefinderScan", ExistingPeriodicWorkPolicy.UPDATE, request);
-    }
-
-    private void openUpdates(){
-        try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/NandorHU/Scrapefinder/actions"))); }
-        catch (Exception e) { Toast.makeText(this, "A frissítési oldal nem nyitható meg.", Toast.LENGTH_SHORT).show(); }
     }
 
     private TextView tv(String text,int size,int color){ TextView t=new TextView(this); t.setText(text); t.setTextSize(size); t.setTextColor(color); return t; }
