@@ -1,67 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:fillViewport="true" android:background="@color/bg">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:padding="18dp">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fitsSystemWindows="true">
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Scrapefinder" android:textColor="@color/text" android:textSize="28sp" android:textStyle="bold" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="HardverApró + Facebook Marketplace figyelés" android:textColor="@color/muted" android:textSize="14sp" android:layout_marginTop="4dp" />
-
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent"
+        android:fillViewport="true" android:clipToPadding="false" android:paddingBottom="92dp">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:background="@drawable/card_bg" android:layout_marginTop="18dp">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Facebook Marketplace" android:textColor="@color/text" android:textStyle="bold" android:textSize="18sp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Apify nélkül. Jelentkezz be a Facebookba az alkalmazáson belül. A session sütik csak ezen a telefonon maradnak."
-                android:textColor="@color/muted" android:textSize="13sp" android:layout_marginTop="6dp" />
-            <Button android:id="@+id/facebookLoginButton" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="BEJELENTKEZÉS FACEBOOKBA" android:layout_marginTop="10dp" />
-            <EditText android:id="@+id/locationInput" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="Marketplace hely, pl. budapest" android:text="budapest" android:textColor="@color/text" android:textColorHint="@color/muted" android:singleLine="true" />
-            <CheckBox android:id="@+id/autoScanCheck" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Automatikus HardverApró figyelés 15 percenként" android:textColor="@color/text" android:checked="true" />
-            <Button android:id="@+id/saveSettingsButton" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="BEÁLLÍTÁSOK MENTÉSE" android:layout_marginTop="6dp" />
-        </LinearLayout>
+            android:orientation="vertical" android:paddingLeft="18dp" android:paddingTop="16dp"
+            android:paddingRight="18dp" android:paddingBottom="24dp">
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:background="@drawable/card_bg" android:layout_marginTop="14dp">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Új keresés" android:textColor="@color/text" android:textStyle="bold" android:textSize="18sp" />
-            <EditText android:id="@+id/queryInput" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="pl. PS5 hibás" android:textColor="@color/text" android:textColorHint="@color/muted" android:singleLine="true" />
-            <EditText android:id="@+id/maxPriceInput" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="Max ár, pl. 70000" android:inputType="number" android:textColor="@color/text" android:textColorHint="@color/muted" android:singleLine="true" />
-            <Button android:id="@+id/addRuleButton" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Keresés hozzáadása" android:layout_marginTop="8dp" />
-        </LinearLayout>
-
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Aktív keresések"
-            android:textColor="@color/text" android:textStyle="bold" android:textSize="18sp" android:layout_marginTop="22dp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Hosszan nyomva törölhető egy keresés."
-            android:textColor="@color/muted" android:textSize="12sp" />
-        <LinearLayout android:id="@+id/rulesContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
-
-        <Button android:id="@+id/scanButton" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="HardverApró keresés most" android:layout_marginTop="20dp" />
-
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Legújabb találatok"
-            android:textColor="@color/text" android:textStyle="bold" android:textSize="18sp" android:layout_marginTop="22dp" />
-        <LinearLayout android:id="@+id/resultsContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
-
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:background="@drawable/card_bg" android:layout_marginTop="18dp">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Alkalmazásfrissítés" android:textColor="@color/text" android:textStyle="bold" android:textSize="18sp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Az új verziókat innen tudod ellenőrizni, letölteni és telepíteni. Nem kell számítógépről újra letölteni az APK-t."
-                android:textColor="@color/muted" android:textSize="13sp" android:layout_marginTop="6dp" />
-            <Button android:id="@+id/updateButton" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="FRISSÍTÉS KERESÉSE" android:layout_marginTop="10dp" />
-        </LinearLayout>
+                android:text="Scrapefinder" android:textColor="@color/text" android:textSize="30sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="HardverApró + Facebook Marketplace figyelés" android:textColor="@color/muted"
+                android:textSize="14sp" android:layout_marginTop="3dp" />
 
-        <TextView android:id="@+id/statusText" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="v0.5 • alkalmazáson belüli frissítés" android:textColor="@color/muted" android:gravity="center" android:layout_marginTop="18dp" android:layout_marginBottom="20dp" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:background="@drawable/card_bg" android:layout_marginTop="20dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="ⓕ  Facebook Marketplace" android:textColor="@color/text" android:textSize="19sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="Apify nélkül. Jelentkezz be a Facebookba az alkalmazáson belül. A session sütik csak ezen a telefonon maradnak."
+                    android:textColor="@color/muted" android:textSize="13sp" android:layout_marginTop="7dp" />
+                <Button android:id="@+id/facebookLoginButton" android:layout_width="match_parent" android:layout_height="54dp"
+                    android:text="ⓕ  BEJELENTKEZÉS FACEBOOKBA" android:textColor="@color/text" android:textStyle="bold"
+                    android:textSize="15sp" android:background="@drawable/green_button_bg" android:layout_marginTop="12dp" />
+                <EditText android:id="@+id/locationInput" android:layout_width="match_parent" android:layout_height="52dp"
+                    android:hint="⌖  Marketplace hely, pl. budapest" android:text="budapest" android:textColor="@color/text"
+                    android:textColorHint="@color/muted" android:textSize="16sp" android:singleLine="true"
+                    android:background="@drawable/input_bg" android:layout_marginTop="14dp" />
+                <CheckBox android:id="@+id/autoScanCheck" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="Automatikus HardverApró figyelés 15 percenként" android:textColor="@color/text"
+                    android:textSize="15sp" android:checked="true" android:buttonTint="@color/accent" android:layout_marginTop="10dp" />
+                <Button android:id="@+id/saveSettingsButton" android:layout_width="match_parent" android:layout_height="52dp"
+                    android:text="⚙  BEÁLLÍTÁSOK MENTÉSE" android:textColor="@color/text" android:textStyle="bold"
+                    android:background="@drawable/input_bg" android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:background="@drawable/card_bg" android:layout_marginTop="14dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="⌕  Új keresés" android:textColor="@color/text" android:textSize="19sp" android:textStyle="bold" />
+                <EditText android:id="@+id/queryInput" android:layout_width="match_parent" android:layout_height="52dp"
+                    android:hint="⌕  pl. PS5 hibás" android:textColor="@color/text" android:textColorHint="@color/muted"
+                    android:singleLine="true" android:background="@drawable/input_bg" android:layout_marginTop="10dp" />
+                <EditText android:id="@+id/maxPriceInput" android:layout_width="match_parent" android:layout_height="52dp"
+                    android:hint="◇  Max ár, pl. 70000" android:inputType="number" android:textColor="@color/text"
+                    android:textColorHint="@color/muted" android:singleLine="true" android:background="@drawable/input_bg"
+                    android:layout_marginTop="8dp" />
+                <Button android:id="@+id/addRuleButton" android:layout_width="match_parent" android:layout_height="52dp"
+                    android:text="＋  KERESÉS HOZZÁADÁSA" android:textColor="@color/text" android:textStyle="bold"
+                    android:background="@drawable/green_button_bg" android:layout_marginTop="10dp" />
+            </LinearLayout>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Aktív keresések"
+                android:textColor="@color/text" android:textStyle="bold" android:textSize="20sp" android:layout_marginTop="22dp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Hosszan nyomva törölhető egy keresés." android:textColor="@color/muted" android:textSize="12sp" />
+            <LinearLayout android:id="@+id/rulesContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+
+            <Button android:id="@+id/scanButton" android:layout_width="match_parent" android:layout_height="52dp"
+                android:text="⌕  HardverApró keresés most" android:textColor="@color/text" android:textStyle="bold"
+                android:background="@drawable/green_button_bg" android:layout_marginTop="18dp" />
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Legújabb találatok"
+                android:textColor="@color/text" android:textStyle="bold" android:textSize="20sp" android:layout_marginTop="22dp" />
+            <LinearLayout android:id="@+id/resultsContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+
+            <TextView android:id="@+id/statusText" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="v0.6 • Új kezelőfelület" android:textColor="@color/muted" android:textSize="12sp"
+                android:gravity="center" android:layout_marginTop="18dp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="78dp" android:layout_gravity="bottom"
+        android:orientation="horizontal" android:gravity="center" android:background="@drawable/bottom_nav_bg"
+        android:paddingLeft="6dp" android:paddingRight="6dp">
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center"
+            android:text="⌂\nKezdőlap" android:textColor="@color/accent" android:textSize="13sp" />
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center"
+            android:text="⌕\nTalálatok" android:textColor="@color/muted" android:textSize="13sp" />
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center"
+            android:text="♢\nÉrtesítések" android:textColor="@color/muted" android:textSize="13sp" />
+        <TextView android:id="@+id/updateButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:gravity="center" android:text="↻\nFrissítések" android:textColor="@color/muted" android:textSize="13sp"
+            android:clickable="true" android:focusable="true" />
     </LinearLayout>
-</ScrollView>
+</FrameLayout>
