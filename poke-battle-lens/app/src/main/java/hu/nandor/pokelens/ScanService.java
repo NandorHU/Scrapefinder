@@ -88,10 +88,11 @@ public final class ScanService extends Service {
             if(images!=null)image=images.acquireLatestImage();long now=SystemClock.elapsedRealtime();
             // The bundled recognizer may need considerably longer for its first model load.
             // Recreating it at 7 seconds repeatedly would prevent that load from finishing.
+            // Busy devices also get that grace period for later reads, with a visible slow state.
             if(gate.isBusy()&&scanStartedAt>0){
                 long elapsed=now-scanStartedAt;
-                if(elapsed>(readerReady?7000:30000)){ocrTimeout();return;}
-                if(!readerReady&&!warmingReported&&elapsed>7000){warmingReported=true;message("Felismerő indítása","Az első szövegfelismerés betöltése folyamatban. Legfeljebb 30 másodpercig várok az első válaszra.","…");}
+                if(elapsed>30000){ocrTimeout();return;}
+                if(!warmingReported&&elapsed>7000){warmingReported=true;clearResult(true);presence.reset();revealWhenReady=false;message(readerReady?"Lassú felismerés":"Felismerő indítása","A szövegfelismerés még folyamatban van. Legfeljebb 30 másodpercig várok a válaszra.","…");}
             }
             int[][] areas=regions(profile,width,height);
             if(image!=null){Image.Plane plane=image.getPlanes()[0];lastTimestamp=image.getTimestamp();noFrameReported=false;gate.observe(SceneFingerprint.rgba(plane.getBuffer(),plane.getRowStride(),plane.getPixelStride(),areas,masks()));retainFrame(image,capture.waiting()||badges.visibleCount(now)>0||controlOverlaps(areas));}
@@ -108,14 +109,14 @@ public final class ScanService extends Service {
             }
             if(capture.waiting()){if(!capture.ready(now,lastTimestamp))return;cachedDirty=false;}
             final long revision=gate.begin(now);if(revision<0){cancelCapture();return;}
-            starting=true;
+            starting=true;android.util.Log.d(TAG,"Starting scan; time="+now);
             final int stride=cachedStride,pixel=cachedPixel,w=cachedWidth,h=cachedHeight;final ByteBuffer clean=ByteBuffer.allocate(stride*h);ByteBuffer snapshot=cachedFrame.duplicate();snapshot.rewind();clean.put(snapshot);clean.rewind();
             Bitmap padded=Bitmap.createBitmap(stride/pixel,h,Bitmap.Config.ARGB_8888),bitmap=null;
             try{padded.copyPixelsFromBuffer(clean);bitmap=Bitmap.createBitmap(padded,0,0,w,h);}finally{if(padded!=bitmap)padded.recycle();}
-            final Profile scannedProfile=profile;final String scannedKey=key;final long scannedReload=reloadToken,serial=++scanSerial;final BattleReader scanner=reader;scanStartedAt=now;
+            final Profile scannedProfile=profile;final String scannedKey=key;final long scannedReload=reloadToken,serial=++scanSerial;final BattleReader scanner=reader;scanStartedAt=now;warmingReported=false;
             try{scanner.scan(bitmap,profile,new BattleReader.Callback(){
                 public void done(BattleReader.Result result){
-                    if(serial!=scanSerial)return;readerReady=true;warmingReported=false;scanStartedAt=0;boolean current=gate.finish(revision);if(stopped){scanner.close();return;}
+                    if(serial!=scanSerial)return;android.util.Log.d(TAG,"OCR duration="+(SystemClock.elapsedRealtime()-scanStartedAt));readerReady=true;warmingReported=false;scanStartedAt=0;boolean current=gate.finish(revision);if(stopped){scanner.close();return;}
                     android.util.Log.d(TAG,"OCR complete; current="+current+", enemy="+(result.enemy!=null)+", positions="+result.positions.size());
                     if(current&&!paused&&!menuOpen&&scannedReload==getSharedPreferences("lens",0).getLong("reload",0)&&scannedKey.equals(Profile.active(ScanService.this).json().toString())){
                         BattlePresence.Mode mode=presence.observe(result.battleVisible,result.enemy,result.own,result.moves);

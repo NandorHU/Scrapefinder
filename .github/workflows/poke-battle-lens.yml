@@ -47,7 +47,9 @@ jobs:
           emulator-boot-timeout: 300
           script: |
             adb install -r touch-fixture/build/outputs/apk/debug/touch-fixture-debug.apk
-            gradle --no-daemon :app:connectedDebugAndroidTest || { adb logcat -d -t 1000 > app/build/reports/androidTests/device-failure.log; exit 1; }
+            mkdir -p app/build/reports/androidTests
+            adb logcat -s PokeLens:D AndroidRuntime:E TextNative:I > app/build/reports/androidTests/capture-runtime.log &
+            gradle --no-daemon :app:connectedDebugAndroidTest || { adb logcat -d -s PokeLens:D AndroidRuntime:E > app/build/reports/androidTests/device-failure.log; exit 1; }
             adb pull /data/local/tmp/badges-preview.png app/build/reports/androidTests/badges-preview.png
             adb pull /data/local/tmp/overlay-preview.png app/build/reports/androidTests/overlay-preview.png
             adb pull /data/local/tmp/editor-preview.png app/build/reports/androidTests/editor-preview.png
