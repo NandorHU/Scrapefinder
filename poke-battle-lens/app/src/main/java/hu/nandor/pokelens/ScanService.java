@@ -121,7 +121,7 @@ public final class ScanService extends Service {
             try{scanner.scan(bitmap,profile,new BattleReader.Callback(){
                 public void done(BattleReader.Result result){
                     if(serial!=scanSerial)return;android.util.Log.d(TAG,"OCR duration="+(SystemClock.elapsedRealtime()-scanStartedAt));readerReady=true;warmingReported=false;scanStartedAt=0;boolean current=gate.finish(revision);if(stopped){scanner.close();return;}
-                    android.util.Log.d(TAG,"OCR complete; current="+current+", enemy="+(result.enemy!=null)+", positions="+result.positions.size());
+                    android.util.Log.d(TAG,"OCR complete; pixels="+result.inputPixels+", current="+current+", enemy="+(result.enemy!=null)+", positions="+result.positions.size());
                     if(current&&!paused&&!menuOpen&&scannedReload==getSharedPreferences("lens",0).getLong("reload",0)&&scannedKey.equals(Profile.active(ScanService.this).json().toString())){
                         BattlePresence.Mode mode=presence.observe(result.battleVisible,result.enemy,result.own,result.moves);
                         if(mode==BattlePresence.Mode.WAITING){clearResult(true);revealWhenReady=false;message("Várakozás csatára","Nem látható felismerhető csata és támadásmenü. Útválasztás vagy más képernyő alatt nincsenek csatajelzések. Ha csata látható, ellenőrizd a profil területeit.","○");return;}

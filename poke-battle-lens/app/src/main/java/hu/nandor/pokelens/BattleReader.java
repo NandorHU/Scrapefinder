@@ -18,33 +18,32 @@ public final class BattleReader implements AutoCloseable {
         public List<MovePosition> positions = new ArrayList<>();
         public String raw = "";
         public boolean battleVisible;
+        public int inputPixels;
     }
-    private static final class Segment {final String text;final Rect box;Segment(String text,Rect box){this.text=text;this.box=box;}}
-    private static void segment(int region,List<String> words,Rect box,List<List<String>> lines,List<Segment> moves){
-        if(words.isEmpty())return;String text=String.join(" ",words);lines.get(region).add(text);if(region==2)moves.add(new Segment(text,new Rect(box)));
+    private static final class Tile {final int region;final Rect source;final float scale;Rect target;Tile(int region,Rect source,float scale){this.region=region;this.source=source;this.scale=scale;}}
+    private static final class Segment {final String text;final Rect box;final Tile tile;Segment(String text,Rect box,Tile tile){this.text=text;this.box=box;this.tile=tile;}}
+    private static void segment(Tile tile,List<String> words,Rect box,List<List<String>> lines,List<Segment> moves){
+        int region=tile.region;
+        if(words.isEmpty())return;String text=String.join(" ",words);lines.get(region).add(text);if(region==2)moves.add(new Segment(text,new Rect(box),tile));
     }
 
     /** One OCR request reads all three regions together; it owns its input bitmap. */
     public void scan(Bitmap frame, Profile profile, Callback callback) {
         final int frameW=frame.getWidth(),frameH=frame.getHeight();
         String[] names = {"enemy", "own", "moves"};
-        Rect[] sources = new Rect[3];
-        Rect[] targets = new Rect[3];
-        int sheetWidth = 1, y = 24;
-        for (int i = 0; i < 3; i++) {
-            sources[i] = profile.crop(names[i], frame.getWidth(), frame.getHeight());
-            float scale = Math.min(3f, Math.min(960f / sources[i].width(), 240f / sources[i].height()));
-            int w = Math.max(1, Math.round(sources[i].width() * scale));
-            int h = Math.max(1, Math.round(sources[i].height() * scale));
-            targets[i] = new Rect(24, y, 24 + w, y + h);
-            sheetWidth = Math.max(sheetWidth, w + 48);
-            y += h + 48;
+        List<Tile> tiles=new ArrayList<>();
+        for(int region=0;region<3;region++){
+            Rect source=profile.crop(names[region],frameW,frameH);int w=source.width(),h=source.height();int[] pixels=new int[w*h];frame.getPixels(pixels,0,w,source.left,source.top,w,h);
+            List<OcrBands.Band> bands=OcrBands.find(pixels,w,h);
+            if(bands.isEmpty())tiles.add(new Tile(region,source,Math.min(3f,Math.min(960f/w,240f/h))));
+            else for(OcrBands.Band band:bands){Rect crop=new Rect(source.left+band.left,source.top+band.top,source.left+band.right,source.top+band.bottom);tiles.add(new Tile(region,crop,Math.min(3f,Math.min(960f/crop.width(),24f/band.inkHeight))));}
         }
-        final Bitmap sheet = Bitmap.createBitmap(sheetWidth, y, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(sheet);
-        canvas.drawColor(Color.WHITE);
-        Paint paint = new Paint(); // nearest-neighbour scaling keeps pixel fonts crisp
-        for (int i = 0; i < 3; i++) canvas.drawBitmap(frame, sources[i], targets[i], paint);
+        int sheetWidth=1,y=16;
+        for(Tile tile:tiles){int w=Math.max(1,Math.round(tile.source.width()*tile.scale)),h=Math.max(1,Math.round(tile.source.height()*tile.scale));tile.target=new Rect(16,y,16+w,y+h);sheetWidth=Math.max(sheetWidth,w+32);y+=h+16;}
+        final Bitmap sheet=Bitmap.createBitmap(sheetWidth,y,Bitmap.Config.ARGB_8888);final int inputPixels=sheetWidth*y;
+        Canvas canvas=new Canvas(sheet);canvas.drawColor(Color.WHITE);
+        Paint paint=new Paint(); // Preserve pixel-font edges while packing only unambiguous text rows.
+        for(Tile tile:tiles)canvas.drawBitmap(frame,tile.source,tile.target,paint);
 
         recognizer.process(InputImage.fromBitmap(sheet, 0)).addOnSuccessListener(text -> {
             try {
@@ -53,11 +52,12 @@ public final class BattleReader implements AutoCloseable {
                 for (Text.TextBlock block : text.getTextBlocks()) {
                     for (Text.Line line : block.getLines()) {
                         // Work at element level: OCR can join two columns, or even different regions.
-                        for (int region = 0; region < 3; region++) {
+                        for (Tile tile : tiles) {
+                            int region=tile.region;
                             List<Text.Element> elements = new ArrayList<>();
                             for (Text.Element e : line.getElements()) {
                                 Rect box = e.getBoundingBox();
-                                if (box != null && targets[region].contains(box.centerX(), box.centerY())) elements.add(e);
+                                if (box != null && tile.target.contains(box.centerX(), box.centerY())) elements.add(e);
                             }
                             if (elements.isEmpty()) continue;
                             elements.sort(Comparator.comparingInt(e -> e.getBoundingBox().left));
@@ -67,7 +67,7 @@ public final class BattleReader implements AutoCloseable {
                             for (Text.Element e : elements) {
                                 Rect box = e.getBoundingBox();
                                 if (region == 2 && right >= 0 && box.left - right > Math.max(20, box.height() * 2)) {
-                                    segment(region,segment,segmentBox,lines,moveSegments);
+                                    segment(tile,segment,segmentBox,lines,moveSegments);
                                     segment.clear();
                                     segmentBox=null;
                                 }
@@ -75,11 +75,11 @@ public final class BattleReader implements AutoCloseable {
                                 if(segmentBox==null)segmentBox=new Rect(box);else segmentBox.union(box);
                                 right = box.right;
                             }
-                            segment(region,segment,segmentBox,lines,moveSegments);
+                            segment(tile,segment,segmentBox,lines,moveSegments);
                         }
                     }
                 }
-                Result out = new Result();
+                Result out = new Result();out.inputPixels=inputPixels;
                 String observedEnemy=findMon(lines.get(0)),observedOwn=findMon(lines.get(1));
                 boolean observedMove=false;for(Segment seg:moveSegments)if(dex.matchMove(seg.text)!=null){observedMove=true;break;}
                 // Manual overrides must not turn a route/menu screen into a battle.
@@ -106,7 +106,7 @@ public final class BattleReader implements AutoCloseable {
                     String norm=NameMatcher.normalize(seg.text);
                     if(name==null&&(norm.length()<3||norm.matches("(bag|pokemon|fight|run|pp|type|power)[0-9]*")))continue;
                     if(!positioned.add(name==null?norm:name))continue;
-                    Rect b=seg.box,s=sources[2],t=targets[2];
+                    Rect b=seg.box,s=seg.tile.source,t=seg.tile.target;
                     out.positions.add(MovePosition.map(name,b.left,b.top,b.right,b.bottom,s.left,s.top,s.width(),s.height(),t.left,t.top,t.width(),t.height(),frameW,frameH));
                 }
                 out.raw = "Ellenfél: " + String.join(" | ", lines.get(0))

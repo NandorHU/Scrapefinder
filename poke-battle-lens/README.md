@@ -46,7 +46,7 @@ A Dungeons & Pokémon álló profil a mellékelt példa elrendezését közelít
 
 ## Jelzések és folyamatos felismerés
 
-A változásfigyelő kizárja a saját jelzések és a vezérlőgomb területét. A legutóbbi képkockát RAM-ban megtartja, így statikus képernyőn is befejezheti a megerősítő olvasást; a felismerés közben érkező legújabb kép sem vész el. Foglalt OCR mellett legfeljebb fél másodpercenként dolgoz fel új képkockát, a már eltárolt változatlan képet nem mintavételezi újra minden ciklusban. Az OCR-lapot méretkorlátozza, hogy az animáció és a felismerés kevesebb CPU-ért versenyezzen. Ha a képen jelzés vagy a kijelölésbe eső gomb szerepel, OCR előtt röviden elrejti őket, és legalább 100 ms plusz egy új képkocka után olvas. A már tiszta első képet azonnal használja. Rövid villanás észlelhető a tiszta kép kérésénél; a tényleges válaszidő telefonfüggő.
+A változásfigyelő kizárja a saját jelzések és a vezérlőgomb területét. A legutóbbi képkockát RAM-ban megtartja, így statikus képernyőn is befejezheti a megerősítő olvasást; a felismerés közben érkező legújabb kép sem vész el. Foglalt OCR mellett legfeljebb fél másodpercenként dolgoz fel új képkockát, a már eltárolt változatlan képet nem mintavételezi újra minden ciklusban. Az OCR-lapot méretkorlátozza, hogy az animáció és a felismerés kevesebb CPU-ért versenyezzen. A 0.3.2 egyenletes hátterű kijelöléseknél levágja az üres margókat, a szövegsorokat egymás alá csomagolja, és kb. 24 pixeles betűmagasságra méretezi őket. Az eredeti kép színeit és a támadások képernyőbeli koordinátáit megőrzi. Texturált, alacsony kontrasztú vagy bizonytalan területeknél a teljes kijelölés olvasására tér vissza. Ha a képen jelzés vagy a kijelölésbe eső gomb szerepel, OCR előtt röviden elrejti őket, és legalább 100 ms plusz egy új képkocka után olvas. A már tiszta első képet azonnal használja. Rövid villanás észlelhető a tiszta kép kérésénél; a tényleges válaszidő telefonfüggő.
 
 Ha indulás után 3,5 másodpercig nem kap képet, **Nincs képkocka** üzenetet ad. Ha a jelzések elrejtése után nincs friss kép, **Nincs friss képkocka** látszik. Az OCR legfeljebb 30 másodpercet kap, hogy az első modellbetöltést vagy egy terhelt telefont ne szakítsa meg túl korán. 7 másodperc után külön indulási/lassú felismerési állapotot mutat. 30 másodperces időtúllépés után új olvasóval próbálkozik; a későn visszatérő régi választ eldobja. A hosszan nyomással megnyitott menü megőrzi a részletes állapotot. Semleges/állapottámadások esetén a sikeres felismerés külön jelzi, hogy miért üres az alapnézet.
 
@@ -60,7 +60,7 @@ Képkockák csak RAM-ban, helyben kerülnek feldolgozásra; nem mentjük vagy k�
 
 JDK 17, Android SDK 35, Gradle 8.9. `./gradlew testDebugUnitTest lintDebug assembleDebug`.
 
-A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.3.1.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
+A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.3.2.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
 
 ## Forrásadatok
 
