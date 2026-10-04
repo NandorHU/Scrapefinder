@@ -16,6 +16,7 @@ import java.util.*;
 
 public final class ScanService extends Service {
     private static final String CHANNEL="battle_scan";
+    private static final String TAG="PokeLens";
     private final Handler main=new Handler(Looper.getMainLooper());
     private MediaProjection projection;private VirtualDisplay display;private ImageReader images;private BattleReader reader;private Dex dex;
     private WindowManager windows;private BadgeLayer badges;private FloatingControls controls;private WindowManager.LayoutParams badgeParams,controlParams;
@@ -40,7 +41,7 @@ public final class ScanService extends Service {
             projection.registerCallback(new MediaProjection.Callback(){public void onStop(){stopSelf();}public void onCapturedContentResize(int w,int h){if(w>0&&h>0&&(w!=width||h!=height))resize(w,h);}},main);
             android.util.DisplayMetrics metrics=new android.util.DisplayMetrics();windows.getDefaultDisplay().getRealMetrics(metrics);width=metrics.widthPixels;height=metrics.heightPixels;
             makeOverlay();createReader();display=projection.createVirtualDisplay("Poké Battle Lens",width,height,getResources().getDisplayMetrics().densityDpi,DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,images.getSurface(),null,main);main.post(poll);
-        }catch(Exception e){Toast.makeText(this,"A figyelés nem indult el: "+e.getMessage(),Toast.LENGTH_LONG).show();stopSelf();}
+        }catch(Exception e){android.util.Log.e(TAG,"Capture startup failed",e);Toast.makeText(this,"A figyelés nem indult el: "+e.getMessage(),Toast.LENGTH_LONG).show();stopSelf();}
         return START_NOT_STICKY;
     }
     private void createReader(){images=ImageReader.newInstance(width,height,PixelFormat.RGBA_8888,2);}
@@ -72,7 +73,7 @@ public final class ScanService extends Service {
             if(images!=null)image=images.acquireLatestImage();long now=SystemClock.elapsedRealtime();
             int[][] areas=regions(profile,width,height);
             if(image!=null){Image.Plane plane=image.getPlanes()[0];lastTimestamp=image.getTimestamp();if(gate.observe(SceneFingerprint.rgba(plane.getBuffer(),plane.getRowStride(),plane.getPixelStride(),areas,masks())))changing();}
-            if(capture.timedOut(now)){cancelCapture();gate.refresh();message("Újrapróbálás","Friss képkockára vár. A jelzések még nem érvényesek.","?");return;}
+            if(capture.timedOut(now)){android.util.Log.w(TAG,"Fresh capture timeout; timestamp="+lastTimestamp+", size="+width+"x"+height);cancelCapture();gate.refresh();message("Újrapróbálás","Friss képkockára vár. A jelzések még nem érvényesek.","?");return;}
             if(!capture.waiting()&&gate.canBegin(now)){
                 // Hiding the visible button also causes a fresh composed frame on a static
                 // game screen, even when there are no multiplier glyphs to remove yet.
@@ -88,6 +89,7 @@ public final class ScanService extends Service {
             try{reader.scan(bitmap,profile,new BattleReader.Callback(){
                 public void done(BattleReader.Result result){
                     boolean current=gate.finish(revision);if(stopped){reader.close();return;}
+                    android.util.Log.d(TAG,"OCR complete; current="+current+", enemy="+(result.enemy!=null)+", positions="+result.positions.size());
                     if(current&&!paused&&!menuOpen&&scannedReload==getSharedPreferences("lens",0).getLong("reload",0)&&scannedKey.equals(Profile.active(ScanService.this).json().toString())){
                         lastResult=result;badgeMasks=badges.prepare(dex,result,scannedProfile,w,h);
                         gate.rebase(SceneFingerprint.rgba(clean,stride,pixel,regions(scannedProfile,w,h),masks()));
@@ -95,10 +97,10 @@ public final class ScanService extends Service {
                         message(uncertain?"Ellenőrizd a felismerést":"Élő",BattleSummary.compact(dex,result,scannedProfile),uncertain?"?":"◎");
                     }
                 }
-                public void error(Exception e){boolean current=gate.finish(revision);gate.refresh();if(stopped){reader.close();return;}if(current&&!paused&&!menuOpen){clearResult(false);message("OCR-hiba","Olvasás nem sikerült. Újrapróbálás…","?");}}
+                public void error(Exception e){android.util.Log.e(TAG,"OCR failed",e);boolean current=gate.finish(revision);gate.refresh();if(stopped){reader.close();return;}if(current&&!paused&&!menuOpen){clearResult(false);message("OCR-hiba","Olvasás nem sikerült. Újrapróbálás…","?");}}
             });}finally{bitmap.recycle();}
             starting=false;cancelCapture();
-        }catch(Exception e){if(starting)gate.failed();gate.invalidate();cancelCapture();clearResult(false);if(!stopped&&!paused)message("Olvasási hiba",e.getMessage()==null?"Próbáld a Force load gombot.":e.getMessage(),"?");}
+        }catch(Exception e){android.util.Log.e(TAG,"Frame processing failed",e);if(starting)gate.failed();gate.invalidate();cancelCapture();clearResult(false);if(!stopped&&!paused)message("Olvasási hiba",e.getMessage()==null?"Próbáld a Force load gombot.":e.getMessage(),"?");}
         finally{if(image!=null)image.close();}
     }
     private void showAll(){if(menuOpen)closeMenu();badges.revealAll();if(lastResult==null)Toast.makeText(this,"Nyisd meg a támadásmenüt; a felismerés után megjelennek a jelzések.",Toast.LENGTH_SHORT).show();}
