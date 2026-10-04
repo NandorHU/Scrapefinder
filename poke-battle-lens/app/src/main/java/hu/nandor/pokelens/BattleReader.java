@@ -33,7 +33,7 @@ public final class BattleReader implements AutoCloseable {
         int sheetWidth = 1, y = 24;
         for (int i = 0; i < 3; i++) {
             sources[i] = profile.crop(names[i], frame.getWidth(), frame.getHeight());
-            float scale = Math.min(3f, Math.min(1600f / sources[i].width(), 420f / sources[i].height()));
+            float scale = Math.min(3f, Math.min(960f / sources[i].width(), 240f / sources[i].height()));
             int w = Math.max(1, Math.round(sources[i].width() * scale));
             int h = Math.max(1, Math.round(sources[i].height() * scale));
             targets[i] = new Rect(24, y, 24 + w, y + h);

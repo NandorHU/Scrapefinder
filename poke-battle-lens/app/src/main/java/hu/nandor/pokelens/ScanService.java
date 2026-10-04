@@ -23,7 +23,7 @@ public final class ScanService extends Service {
     private boolean paused,menuOpen,stopped;private long reloadToken,lastTimestamp;private int width,height;private String profileKey="",lastProfile="";
     private final ScanGate gate=new ScanGate();private final CleanCapture capture=new CleanCapture();private List<int[]> badgeMasks=new ArrayList<>();private BattleReader.Result lastResult;
     private final BattlePresence presence=new BattlePresence();
-    private long startedAt,scanStartedAt,scanSerial;private boolean noFrameReported,revealWhenReady,readerReady,warmingReported;
+    private long startedAt,scanStartedAt,scanSerial,lastBusyFrameAt;private boolean noFrameReported,revealWhenReady,readerReady,warmingReported;
     private ByteBuffer cachedFrame;private int cachedStride,cachedPixel,cachedWidth,cachedHeight;private boolean cachedDirty;
     private String statusTitle="Olvasás",statusText="Pokémonok és támadások felismerése…";
     private final Runnable poll=new Runnable(){public void run(){if(stopped)return;frame();if(!stopped)main.postDelayed(this,100);}};
@@ -85,18 +85,22 @@ public final class ScanService extends Service {
             Profile profile=Profile.active(this);String key=profile.json().toString();
             if(!key.equals(profileKey)){profileKey=key;lastProfile=profile.name;gate.invalidate();cancelCapture();cachedFrame=null;startedAt=SystemClock.elapsedRealtime();noFrameReported=false;changing();}
             if(paused||menuOpen)return;
-            if(images!=null)image=images.acquireLatestImage();long now=SystemClock.elapsedRealtime();
+            long now=SystemClock.elapsedRealtime();
             // The bundled recognizer may need considerably longer for its first model load.
             // Recreating it at 7 seconds repeatedly would prevent that load from finishing.
             // Busy devices also get that grace period for later reads, with a visible slow state.
             if(gate.isBusy()&&scanStartedAt>0){
                 long elapsed=now-scanStartedAt;
                 if(elapsed>30000){ocrTimeout();return;}
-                if(!warmingReported&&elapsed>7000){warmingReported=true;clearResult(true);presence.reset();revealWhenReady=false;message(readerReady?"Lassú felismerés":"Felismerő indítása","A szövegfelismerés még folyamatban van. Legfeljebb 30 másodpercig várok a válaszra.","…");}
+                if(!warmingReported&&elapsed>7000){warmingReported=true;clearResult(true);message(readerReady?"Lassú felismerés":"Felismerő indítása","A szövegfelismerés még folyamatban van. Legfeljebb 30 másodpercig várok a válaszra.","…");}
             }
+            // OCR and animated capture compete for CPU on slower devices. Keep only
+            // the newest frame twice a second while the recognizer is occupied.
+            if(gate.isBusy()){if(now-lastBusyFrameAt<500)return;lastBusyFrameAt=now;}
+            if(images!=null)image=images.acquireLatestImage();
             int[][] areas=regions(profile,width,height);
             if(image!=null){Image.Plane plane=image.getPlanes()[0];lastTimestamp=image.getTimestamp();noFrameReported=false;gate.observe(SceneFingerprint.rgba(plane.getBuffer(),plane.getRowStride(),plane.getPixelStride(),areas,masks()));retainFrame(image,capture.waiting()||badges.visibleCount(now)>0||controlOverlaps(areas));}
-            else if(cachedFrame!=null){gate.observe(SceneFingerprint.rgba(cachedFrame,cachedStride,cachedPixel,areas,masks()));}
+            else if(cachedFrame!=null&&!gate.hasFrame()){gate.observe(SceneFingerprint.rgba(cachedFrame,cachedStride,cachedPixel,areas,masks()));}
             else if(cachedFrame==null&&!noFrameReported&&now-startedAt>3500){noFrameReported=true;clearResult(true);presence.reset();message("Nincs képkocka","A megosztásból nem érkezik kép. Indítsd újra a figyelést, és válaszd a teljes képernyő megosztását.","?");}
             if(capture.timedOut(now)){android.util.Log.w(TAG,"Fresh capture timeout; timestamp="+lastTimestamp+", size="+width+"x"+height);cancelCapture();gate.refresh();clearResult(true);presence.reset();cachedFrame=null;message("Nincs friss képkocka","A jelzések elrejtése után nem érkezett új kép. A korábbi jelzéseket töröltem; újrapróbálás.","?");return;}
             if(!capture.waiting()){

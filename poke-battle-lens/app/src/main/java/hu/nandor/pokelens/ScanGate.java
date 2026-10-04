@@ -37,5 +37,6 @@ public final class ScanGate {
     public void refresh() { completedFrame = -1; revision++; }
     public void failed() { busy = false; }
     public boolean isBusy() { return busy; }
+    public boolean hasFrame() { return hasFrame; }
     public void invalidate() { hasFrame = false; completedFrame = -1; revision++; }
 }
