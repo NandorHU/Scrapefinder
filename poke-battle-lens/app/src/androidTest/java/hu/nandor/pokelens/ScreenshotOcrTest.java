@@ -57,4 +57,11 @@ public class ScreenshotOcrTest {
             }
         }}finally{reader.close();}
     }
+    @Test public void routeScreenIsNotBattleDespiteManualOverrides() throws Exception {
+        Context app=InstrumentationRegistry.getInstrumentation().getTargetContext();Bitmap frame=Bitmap.createBitmap(900,1600,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(frame);c.drawColor(Color.WHITE);Paint ink=new Paint(Paint.ANTI_ALIAS_FLAG);ink.setColor(Color.BLACK);ink.setTextSize(38);ink.setTypeface(Typeface.DEFAULT_BOLD);
+        c.drawText("CHOOSE A PATH",60,270,ink);c.drawText("PIKACHU",510,480,ink);c.drawText("LEFT",40,800,ink);c.drawText("RIGHT",500,800,ink);c.drawText("CONTINUE",40,850,ink);
+        Profile p=new Profile("route");p.manualEnemy="ditto";p.manualOwn="pikachu";p.manualMoves="charm,nasty-plot,play-nice,nuzzle";
+        CountDownLatch done=new CountDownLatch(1);BattleReader.Result[] result={null};Exception[] error={null};BattleReader reader=new BattleReader(new Dex(app));
+        try{reader.scan(frame,p,new BattleReader.Callback(){public void done(BattleReader.Result r){result[0]=r;done.countDown();}public void error(Exception e){error[0]=e;done.countDown();}});assertTrue(done.await(30,TimeUnit.SECONDS));assertNull(error[0]);assertNotNull(result[0]);assertEquals("ditto",result[0].enemy);assertEquals(4,result[0].moves.size());assertFalse("Manual values must not make route navigation a battle",result[0].battleVisible);}finally{reader.close();frame.recycle();}
+    }
 }

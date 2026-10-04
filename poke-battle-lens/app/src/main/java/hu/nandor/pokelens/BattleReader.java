@@ -17,6 +17,7 @@ public final class BattleReader implements AutoCloseable {
         public List<String> moves = new ArrayList<>();
         public List<MovePosition> positions = new ArrayList<>();
         public String raw = "";
+        public boolean battleVisible;
     }
     private static final class Segment {final String text;final Rect box;Segment(String text,Rect box){this.text=text;this.box=box;}}
     private static void segment(int region,List<String> words,Rect box,List<List<String>> lines,List<Segment> moves){
@@ -79,10 +80,14 @@ public final class BattleReader implements AutoCloseable {
                     }
                 }
                 Result out = new Result();
+                String observedEnemy=findMon(lines.get(0)),observedOwn=findMon(lines.get(1));
+                boolean observedMove=false;for(Segment seg:moveSegments)if(dex.matchMove(seg.text)!=null){observedMove=true;break;}
+                // Manual overrides must not turn a route/menu screen into a battle.
+                out.battleVisible=observedMove&&(observedEnemy!=null||observedOwn!=null);
                 out.enemy = dex.matchPokemon(profile.manualEnemy);
-                if (out.enemy == null) out.enemy = findMon(lines.get(0));
+                if (out.enemy == null) out.enemy = observedEnemy;
                 out.own = dex.matchPokemon(profile.manualOwn);
-                if (out.own == null) out.own = findMon(lines.get(1));
+                if (out.own == null) out.own = observedOwn;
                 Collection<String> candidates = profile.manualMoves.trim().isEmpty()
                         ? lines.get(2) : Arrays.asList(profile.manualMoves.split("[,;\\n]"));
                 LinkedHashSet<String> detected = new LinkedHashSet<>();

@@ -6,11 +6,12 @@ Magyar nyelvű, helyben működő Pokémon csatasegéd. Android 8.0+.
 
 - Teljes képernyő megosztása Android MediaProjection API-val; nincs root vagy Accessibility-engedély.
 - Folyamatos figyelés: 100 ms-os képernyőellenőrzés a három kijelölt területen, változáskor új felismerés. Egyszerre egy OCR-kérés, legalább 300 ms az indítások között; változatlan képnél 2 másodperces tartalék frissítés. A tényleges felismerési idő telefonfüggő, a 100 ms nem válaszidő-garancia.
-- Pokémon- vagy támadásváltáskor az előző eredmény azonnal törlődik a változás észlelésekor. A közben elavult OCR-válaszokat eldobja.
+- A háttér animációja új olvasást kér, de nem törli és nem érvényteleníti folyamatosan az OCR-válaszokat. Új Pokémon- vagy támadáslista felismerésekor törli az előző jelzéseket, majd két egyező név/támadás olvasás után jeleníti meg az újakat. Profilváltás, Force load, szünet és méretváltás továbbra is érvényteleníti a korábbi kérést.
 - Beépített, offline ML Kit OCR (angol Pokémon- és támadásnevek).
 - 1351 Pokémon-forma, 919 támadás, két típus együttes szorzója.
 - A játék támadásnevei mellett apró típusszorzók jelennek meg. Az OCR a nevek pozícióját is felismeri; nincs szükség négy külön jelzéshely kézi beállítására. A jelzések nem fedik a felismert neveket és átengedik az érintést.
 - Alapból csak az 1×-től eltérő értékek látszanak; bizonytalan felismerésnél `?`. A 44 dp méretű, húzható gombra koppintva minden szorzó és az állapottámadások `áll.` jelzése 5 másodpercre előhívható.
+- Útválasztás és más képernyő esetén a jelzések eltűnnek; a kis gomb `○`, a menü **Várakozás csatára** állapotot mutat. Csata és látható támadásmenü felismerésekor automatikusan folytatja. A kézi javítások nem kényszerítik csatává az útválasztót. Téves OCR vagy rossz profil szintén várakozást okozhat; ez nem teljes játékállapot-ismeret.
 - Hosszan nyomva megnyílik a vezérlőmenü: mentett profilválasztó, Force load, szünet, beállítások és leállítás. A figyelés a nyitott menüben szünetel.
 - **Force load** a hosszan nyomással megnyitható menüben: újratölti az aktív mentett profilt, eldobja a korábbi képkockát és OCR-eredményt, majd új olvasást indít. Szünetből is folytatja a figyelést.
 - **Profil mentése**, **Mentés más néven**, **Mentett profil újratöltése** a főképernyőn. A másolat megtartja a területeket, generációt és kézi javításokat; a profilválasztóban visszatölthető.
@@ -45,7 +46,9 @@ A Dungeons & Pokémon álló profil a mellékelt példa elrendezését közelít
 
 ## Jelzések és folyamatos felismerés
 
-A változásfigyelő kizárja a saját jelzések és a vezérlőgomb területét. OCR előtt röviden elrejti a jelzéseket és a kis gombot, megvár legalább 100 ms-ot és egy új képkockát, majd az így kapott tiszta képet olvassa. A gomb elrejtése változatlan játékfelületnél is új képkockát eredményez. Emiatt rövid villanás észlelhető az újraolvasáskor. Nem olvassa vissza a saját szorzóit. A tényleges válaszidő telefonfüggő.
+A változásfigyelő kizárja a saját jelzések és a vezérlőgomb területét. A legutóbbi képkockát RAM-ban megtartja, így statikus képernyőn is befejezheti a megerősítő olvasást; a felismerés közben érkező legújabb kép sem vész el. Ha a képen jelzés vagy a kijelölésbe eső gomb szerepel, OCR előtt röviden elrejti őket, és legalább 100 ms plusz egy új képkocka után olvas. A már tiszta első képet azonnal használja. Rövid villanás észlelhető a tiszta kép kérésénél; a tényleges válaszidő telefonfüggő.
+
+Ha indulás után 3,5 másodpercig nem kap képet, **Nincs képkocka** üzenetet ad. Ha a jelzések elrejtése után nincs friss kép, **Nincs friss képkocka** látszik. 7 másodperces OCR-időtúllépés után új olvasóval próbálkozik; a későn visszatérő régi választ eldobja. A hosszan nyomással megnyitott menü megőrzi a részletes állapotot. Semleges/állapottámadások esetén a sikeres felismerés külön jelzi, hogy miért üres az alapnézet.
 
 A jelzések ablaka nem érinthető és kellően áttetsző az Android 12+ érintésvédelméhez. Biztonsági okból egyes alkalmazások ettől függetlenül is elutasíthatják a fedett érintéseket. A menü és a kis gomb szándékosan kezelhető. Szűk helyen a jelzés kimaradhat, hogy ne takarja a nevet; ilyenkor a kis gomb `?` állapotot mutat, és a részletes menüben olvasható a felismerés.
 
@@ -57,7 +60,7 @@ Képkockák csak RAM-ban, helyben kerülnek feldolgozásra; nem mentjük vagy k�
 
 JDK 17, Android SDK 35, Gradle 8.9. `./gradlew testDebugUnitTest lintDebug assembleDebug`.
 
-A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.3.0.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
+A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.3.1.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
 
 ## Forrásadatok
 
@@ -67,7 +70,7 @@ A Pokémon nevek és kapcsolódó védjegyek a megfelelő jogosultak tulajdonát
 
 ## Android- és érintéstesztek
 
-A CI külön `touch-fixture` tesztappot telepít az emulátorra. Más UID alatt futó valódi gombon ellenőrzi, hogy a megrajzolt szorzójelzésen átmenő érintés célba ér. A tesztapp nem része a kiadott APK-nak. A jelzésnézet képe az Actions tesztjelentésében `badges-preview.png` néven elérhető.
+A CI külön `touch-fixture` tesztappot telepít az emulátorra. Más UID alatt futó valódi gombon ellenőrzi, hogy a megrajzolt szorzójelzésen átmenő érintés célba ér. A tesztapp nem része a kiadott APK-nak. A valódi MediaProjection-teszt statikus csatával indul, majd folyamatosan animált háttér mellett Pokémonváltást, útválasztást és visszatérést ellenőriz, beleértve a Ditto/Charm/Nasty Plot/Play Nice/Nuzzle jelzések előhívását. Képernyőképen ellenőrzi a ténylegesen kirajzolt szorzókat és azok eltűnését útválasztáskor. Ez tesztjelenet, nem az élő játékoldal. A 2026-10-04-i élő ellenőrzést a játékoldal ebben a böngészőben megjelenő **Deployment Paused** oldala blokkolta. A jelzésnézet képe az Actions tesztjelentésében `badges-preview.png` néven elérhető.
 
 ## Helyi OCR-teszt
 

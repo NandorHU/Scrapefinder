@@ -11,10 +11,10 @@ public class LiveScanTest {
         assertTrue(gate.observe(42));assertTrue(gate.finish(gate.begin(300)));
         gate.invalidate();assertTrue(gate.observe(42));assertTrue(gate.finish(gate.begin(600)));
     }
-    @Test public void switchDuringOcrRejectsOldResultAndReadsNewestScene(){
+    @Test public void animationDuringOcrQueuesAnotherReadWithoutStarvingResults(){
         ScanGate gate=new ScanGate();assertTrue(gate.observe(1));long old=gate.begin(0);
         assertTrue(gate.observe(2));assertTrue(gate.observe(3));assertEquals(-1,gate.begin(300));
-        assertFalse(gate.finish(old));long latest=gate.begin(300);assertTrue(latest>old);assertTrue(gate.finish(latest));
+        assertTrue(gate.finish(old));long latest=gate.begin(300);assertTrue(latest>=0);assertTrue(gate.finish(latest));
         assertFalse(gate.observe(3));assertEquals(-1,gate.begin(600));
     }
     @Test public void stableScreenHasFallbackAndChangedScreenIsThrottled(){
