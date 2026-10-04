@@ -5,7 +5,7 @@ import java.nio.file.*;
 import java.util.*;
 
 public class CompactSummaryTest {
-    private Dex dex() throws Exception{return new Dex(Files.readString(Paths.get("src/main/assets/dex.json")));}
+    private Dex dex() throws Exception{return new Dex(new String(Files.readAllBytes(Paths.get("src/main/assets/dex.json")),java.nio.charset.StandardCharsets.UTF_8));}
     @Test public void factorsAreBesideTheirAttackAndStatusMovesAreNotDamage() throws Exception{
         BattleReader.Result r=new BattleReader.Result();r.enemy="charizard";r.own="squirtle";
         r.moves=Arrays.asList("rock-slide","water-gun","tackle","tail-whip");
