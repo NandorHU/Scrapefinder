@@ -16,12 +16,15 @@ public final class ScanGate {
     }
 
     public long begin(long now) {
-        if (!hasFrame || busy || now - lastStart < MIN_SCAN_INTERVAL_MS) return -1;
-        if (completedRevision == revision && now - lastStart < FALLBACK_REFRESH_MS) return -1;
+        if (!canBegin(now)) return -1;
         busy = true;
         lastStart = now;
         return revision;
     }
+
+    public boolean canBegin(long now){return hasFrame&&!busy&&now-lastStart>=MIN_SCAN_INTERVAL_MS&&(completedRevision!=revision||now-lastStart>=FALLBACK_REFRESH_MS);}
+    /** A changed exclusion mask must not be mistaken for a changed game scene. */
+    public void rebase(long cleanFingerprint){if(hasFrame)fingerprint=cleanFingerprint;}
 
     public boolean finish(long requestRevision) {
         busy = false;

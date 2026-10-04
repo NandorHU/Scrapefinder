@@ -15,11 +15,17 @@ public final class BattleReader implements AutoCloseable {
     public static final class Result {
         public String enemy, own;
         public List<String> moves = new ArrayList<>();
+        public List<MovePosition> positions = new ArrayList<>();
         public String raw = "";
+    }
+    private static final class Segment {final String text;final Rect box;Segment(String text,Rect box){this.text=text;this.box=box;}}
+    private static void segment(int region,List<String> words,Rect box,List<List<String>> lines,List<Segment> moves){
+        if(words.isEmpty())return;String text=String.join(" ",words);lines.get(region).add(text);if(region==2)moves.add(new Segment(text,new Rect(box)));
     }
 
     /** One OCR request reads all three regions together; it owns its input bitmap. */
     public void scan(Bitmap frame, Profile profile, Callback callback) {
+        final int frameW=frame.getWidth(),frameH=frame.getHeight();
         String[] names = {"enemy", "own", "moves"};
         Rect[] sources = new Rect[3];
         Rect[] targets = new Rect[3];
@@ -42,6 +48,7 @@ public final class BattleReader implements AutoCloseable {
         recognizer.process(InputImage.fromBitmap(sheet, 0)).addOnSuccessListener(text -> {
             try {
                 List<List<String>> lines = Arrays.asList(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+                List<Segment> moveSegments=new ArrayList<>();
                 for (Text.TextBlock block : text.getTextBlocks()) {
                     for (Text.Line line : block.getLines()) {
                         // Work at element level: OCR can join two columns, or even different regions.
@@ -54,17 +61,20 @@ public final class BattleReader implements AutoCloseable {
                             if (elements.isEmpty()) continue;
                             elements.sort(Comparator.comparingInt(e -> e.getBoundingBox().left));
                             List<String> segment = new ArrayList<>();
+                            Rect segmentBox=null;
                             int right = -1;
                             for (Text.Element e : elements) {
                                 Rect box = e.getBoundingBox();
                                 if (region == 2 && right >= 0 && box.left - right > Math.max(20, box.height() * 2)) {
-                                    lines.get(region).add(String.join(" ", segment));
+                                    segment(region,segment,segmentBox,lines,moveSegments);
                                     segment.clear();
+                                    segmentBox=null;
                                 }
                                 segment.add(e.getText());
+                                if(segmentBox==null)segmentBox=new Rect(box);else segmentBox.union(box);
                                 right = box.right;
                             }
-                            if (!segment.isEmpty()) lines.get(region).add(String.join(" ", segment));
+                            segment(region,segment,segmentBox,lines,moveSegments);
                         }
                     }
                 }
@@ -82,6 +92,18 @@ public final class BattleReader implements AutoCloseable {
                 }
                 out.moves = new ArrayList<>(detected);
                 if (out.moves.size() > 4) out.moves = new ArrayList<>(out.moves.subList(0, 4));
+                Set<String> positioned=new HashSet<>();
+                moveSegments.sort(Comparator.comparingInt((Segment s)->s.box.top).thenComparingInt(s->s.box.left));
+                // Known names first; unmatched plausible menu text gets a question mark.
+                for(int pass=0;pass<2;pass++)for(Segment seg:moveSegments){
+                    String name=dex.matchMove(seg.text);if(name!=null&&!out.moves.contains(name))name=null;
+                    if((pass==0)!=(name!=null)||out.positions.size()>=4)continue;
+                    String norm=NameMatcher.normalize(seg.text);
+                    if(name==null&&(norm.length()<3||norm.matches("(bag|pokemon|fight|run|pp|type|power)[0-9]*")))continue;
+                    if(!positioned.add(name==null?norm:name))continue;
+                    Rect b=seg.box,s=sources[2],t=targets[2];
+                    out.positions.add(MovePosition.map(name,b.left,b.top,b.right,b.bottom,s.left,s.top,s.width(),s.height(),t.left,t.top,t.width(),t.height(),frameW,frameH));
+                }
                 out.raw = "Ellenfél: " + String.join(" | ", lines.get(0))
                         + "\nSaját: " + String.join(" | ", lines.get(1))
                         + "\nTámadások: " + String.join(" | ", lines.get(2));

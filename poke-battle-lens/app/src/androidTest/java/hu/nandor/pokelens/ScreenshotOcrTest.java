@@ -46,6 +46,15 @@ public class ScreenshotOcrTest {
             assertEquals(state[0].toLowerCase(java.util.Locale.ROOT),result[0].enemy);assertEquals(state[1].toLowerCase(java.util.Locale.ROOT),result[0].own);
             java.util.Set<String> expected=new java.util.HashSet<>();for(int i=2;i<6;i++)expected.add(state[i].toLowerCase(java.util.Locale.ROOT).replace(' ','-'));
             assertEquals(expected,new java.util.HashSet<>(result[0].moves));frame.recycle();
+            assertEquals(4,result[0].positions.size());
+            for(MovePosition p:result[0].positions){
+                int index=-1;for(int i=2;i<6;i++)if(state[i].toLowerCase(java.util.Locale.ROOT).replace(' ','-').equals(p.name))index=i;
+                assertTrue("Every OCR anchor must match its current move",index>=2);
+                assertEquals(index<4?40f/900:500f/900,p.left,.025f);
+                float baseline=(index==2||index==4)?800:850;
+                assertTrue("Anchor must follow the current row",p.top>(baseline-60)/1600&&p.bottom<(baseline+15)/1600);
+                assertTrue(p.left<p.right&&p.top<p.bottom);
+            }
         }}finally{reader.close();}
     }
 }
