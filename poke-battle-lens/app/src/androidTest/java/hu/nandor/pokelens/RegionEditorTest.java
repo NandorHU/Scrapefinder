@@ -29,6 +29,13 @@ public class RegionEditorTest {
             v.setPanMode(false);drag(v,100,100,300,300);assertArrayEquals(new float[]{.25f,.25f,.375f,.3125f},p.enemy,.0001f);
         });
     }
+    @Test public void cornerTapDoesNotEditButDraggingResizesTheRegion(){
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
+            Profile p=new Profile("corner");float[] before=p.enemy.clone();RegionEditor v=canvas(p);
+            event(v,MotionEvent.ACTION_DOWN,42,202);event(v,MotionEvent.ACTION_UP,42,202);assertArrayEquals(before,p.enemy,0);assertFalse(v.canUndo());
+            drag(v,32,192,48,208);assertArrayEquals(new float[]{.06f,.13f,.48f,.23f},p.enemy,.0001f);
+        });
+    }
     @Test public void cancelAndTwoFingerGestureDoNotOverwriteSelection(){
         InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
             Profile p=new Profile("pinch");float[] before=p.enemy.clone();RegionEditor v=canvas(p);

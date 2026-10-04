@@ -48,6 +48,7 @@ jobs:
           script: |
             gradle --no-daemon connectedDebugAndroidTest
             adb pull /sdcard/Android/data/hu.nandor.pokelens/files/editor-preview.png app/build/reports/androidTests/editor-preview.png
+            python3 -c "import base64,pathlib; print('::group::Synthetic editor preview'); print('EDITOR_PREVIEW_BASE64='+base64.b64encode(pathlib.Path('app/build/reports/androidTests/editor-preview.png').read_bytes()).decode()); print('::endgroup::')"
       - name: Name APK
         run: cp app/build/outputs/apk/debug/app-debug.apk poke-battle-lens-0.2.1.apk
       - uses: actions/upload-artifact@v4

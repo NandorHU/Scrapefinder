@@ -11,10 +11,10 @@ final class RegionEditor extends View {
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
     private final ScaleGestureDetector scaler;
     private final ArrayDeque<Edit> history=new ArrayDeque<>();
-    private float scale,left,top,lastX,lastY,anchorX,anchorY;
+    private float scale,left,top,lastX,lastY,anchorX,anchorY,downX,downY;
     private float[] draft;
     private int selection;
-    private boolean panMode,multiple,drawing;
+    private boolean panMode,multiple,drawing,moved;
     private Runnable listener;
     private static final int[] COLORS={Color.rgb(255,163,102),Color.rgb(93,228,199),Color.rgb(133,164,255)};
     private static final String[] LABELS={"ELLENFÉL","SAJÁT","TÁMADÁSOK"};
@@ -93,6 +93,7 @@ final class RegionEditor extends View {
         for(float[] corner:corners){float dx=px-corner[0],dy=py-corner[1],distance=dx*dx+dy*dy;if(distance<nearest){nearest=distance;handle=corner;}}
         anchorX=handle==null?x(px):handle[2];anchorY=handle==null?y(py):handle[3];drawing=true;
     }
+    private void trackMovement(float px,float py){float dx=px-downX,dy=py-downY,slop=Ui.dp(getContext(),3);if(dx*dx+dy*dy>=slop*slop)moved=true;}
     private void updateSelection(float px,float py){float endX=x(px),endY=y(py);draft=new float[]{Math.min(anchorX,endX),Math.min(anchorY,endY),Math.max(anchorX,endX),Math.max(anchorY,endY)};invalidate();}
     @Override public boolean onTouchEvent(MotionEvent e){
         // Feed every event, including UP/CANCEL, to the scale detector.
@@ -101,19 +102,19 @@ final class RegionEditor extends View {
         for(int i=0;i<e.getPointerCount();i++){if(action==MotionEvent.ACTION_POINTER_UP&&i==e.getActionIndex())continue;fx+=e.getX(i);fy+=e.getY(i);count++;}
         fx/=Math.max(1,count);fy/=Math.max(1,count);
         if(action==MotionEvent.ACTION_DOWN){
-            multiple=false;draft=null;drawing=false;lastX=fx;lastY=fy;
+            multiple=false;moved=false;draft=null;drawing=false;lastX=fx;lastY=fy;downX=e.getX();downY=e.getY();
             if(getParent()!=null)getParent().requestDisallowInterceptTouchEvent(true);
             if(!panMode)startSelection(e.getX(),e.getY());return true;
         }
         if(action==MotionEvent.ACTION_POINTER_DOWN||action==MotionEvent.ACTION_POINTER_UP){multiple=true;drawing=false;draft=null;lastX=fx;lastY=fy;invalidate();return true;}
         if(action==MotionEvent.ACTION_MOVE){
             if(e.getPointerCount()>1||panMode){pan(fx-lastX,fy-lastY);}
-            else if(!multiple&&drawing)updateSelection(e.getX(),e.getY());
+            else if(!multiple&&drawing){trackMovement(e.getX(),e.getY());if(moved)updateSelection(e.getX(),e.getY());}
             lastX=fx;lastY=fy;return true;
         }
         if(action==MotionEvent.ACTION_UP||action==MotionEvent.ACTION_CANCEL){
             if(action==MotionEvent.ACTION_UP&&!multiple&&drawing){
-                updateSelection(e.getX(),e.getY());
+                trackMovement(e.getX(),e.getY());if(moved)updateSelection(e.getX(),e.getY());
                 if(draft!=null&&(draft[2]-draft[0])*image.getWidth()*scale>=Ui.dp(getContext(),6)&&(draft[3]-draft[1])*image.getHeight()*scale>=Ui.dp(getContext(),6)){
                     history.addLast(new Edit(selection,region(selection).clone()));if(history.size()>30)history.removeFirst();System.arraycopy(draft,0,region(selection),0,4);
                 }
