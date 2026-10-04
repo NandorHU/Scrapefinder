@@ -10,7 +10,7 @@ Magyar nyelvű, helyben működő Pokémon csatasegéd. Android 8.0+.
 - Beépített, offline ML Kit OCR (angol Pokémon- és támadásnevek).
 - 1351 Pokémon-forma, 919 támadás, két típus együttes szorzója.
 - Húzható, összecsukható lebegő ablak; szünet és azonnali leállítás.
-- Játékonként menthető, képernyőképen kijelölhető 3 olvasási terület.
+- Játékonként menthető 3 olvasási terület; nagy képnézet, csippentéses nagyítás, kétujjas mozgatás, fogható sarokpontok és visszavonás.
 - Kézi névjavítás és képernyőképes felismerési teszt.
 - Generációválasztás (1–9): korábbi Pokémon-típusok, ismert támadásmódosítások, Gen 1 és Gen 2–5 típustábla, Gen 1–3 típus szerinti fizikai/speciális kategória.
 
@@ -19,8 +19,8 @@ Magyar nyelvű, helyben működő Pokémon csatasegéd. Android 8.0+.
 1. Telepítsd az APK-t.
 2. Készíts teljes képernyőképet a játék nyitott támadásmenüjéről.
 3. Válassz vagy hozz létre profilt. A **Profil beállítása / kép tesztelése** gombbal nyisd meg a képet.
-4. Jelöld ki az ellenfél nevét, a saját Pokémon nevét és a négy támadást. Csak a neveket jelöld ki: ne a szintet/HP-t.
-5. Válaszd a játék generációját, teszteld a képet, ments.
+4. A nagy képnézetben válaszd ki az ellenfél nevét, a saját Pokémon nevét, majd a négy támadást. Területváltáskor a kép arra közelít. Csippentéssel vagy a **+/−** gombokkal nagyíthatsz, két ujjal mozgathatsz. Egyujjas mozgatáshoz válts **Mozgatás** módra, majd vissza **Kijelölés** módra. Egy ujjal húzz téglalapot; a sarkokat külön húzhatod. **Visszavonás**: előző kijelölés helyreállítása; **Teljes kép**: teljes képernyőkép megmutatása. Csak a neveket jelöld ki: ne a szintet/HP-t.
+5. A **Gen** gombbal válaszd a játék generációját, teszteld a képet, majd ments. A teszteredmény külön ablakban nyílik meg, így a kép nem zsugorodik össze.
 6. Engedélyezd a más appok feletti megjelenítést, majd indítsd a figyelést és engedélyezd a képernyőmegosztást.
 7. Válts a játékra. Pokémonváltáskor nem kell új képernyőképet készíteni: a látható nevek és támadások automatikusan frissülnek. Húzd a lebegő ablakot a név/támadás-területeken kívülre.
 
@@ -46,7 +46,7 @@ Képkockák csak RAM-ban, helyben kerülnek feldolgozásra; nem mentjük vagy k�
 
 JDK 17, Android SDK 35, Gradle 8.9. `./gradlew testDebugUnitTest lintDebug assembleDebug`.
 
-A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.2.0.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
+A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.2.1.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
 
 ## Forrásadatok
 

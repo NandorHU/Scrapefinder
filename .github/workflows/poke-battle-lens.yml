@@ -36,7 +36,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: OCR and Pokemon switch device tests
+      - name: OCR, Pokemon switch and region editor device tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -45,13 +45,15 @@ jobs:
           profile: pixel_2
           working-directory: poke-battle-lens
           emulator-boot-timeout: 300
-          script: gradle --no-daemon connectedDebugAndroidTest
+          script: |
+            gradle --no-daemon connectedDebugAndroidTest
+            adb pull /sdcard/Android/data/hu.nandor.pokelens/files/editor-preview.png app/build/reports/androidTests/editor-preview.png
       - name: Name APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk poke-battle-lens-0.2.0.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk poke-battle-lens-0.2.1.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: poke-battle-lens-0.2.0
-          path: poke-battle-lens/poke-battle-lens-0.2.0.apk
+          name: poke-battle-lens-0.2.1
+          path: poke-battle-lens/poke-battle-lens-0.2.1.apk
           retention-days: 30
       - uses: actions/upload-artifact@v4
         if: always()
