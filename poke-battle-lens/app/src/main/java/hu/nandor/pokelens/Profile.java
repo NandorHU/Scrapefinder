@@ -28,5 +28,6 @@ public final class Profile {
         }return list;
     }
     public static void save(Context c,List<Profile> list){JSONArray a=new JSONArray();for(Profile p:list)a.put(p.json());c.getSharedPreferences("lens",0).edit().putString("profiles",a.toString()).apply();}
+    public static void requestReload(Context c){c.getSharedPreferences("lens",0).edit().putLong("reload",System.nanoTime()).apply();}
     public static Profile active(Context c){List<Profile> list=load(c);int i=c.getSharedPreferences("lens",0).getInt("active",0);return list.get(Math.min(Math.max(0,i),list.size()-1));}
 }

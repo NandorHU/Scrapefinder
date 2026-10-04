@@ -2,6 +2,19 @@ package hu.nandor.pokelens;
 import java.util.*;
 
 public final class BattleSummary {
+    /** One attack per line, with its type multiplier immediately beside its name. */
+    public static String compact(Dex dex,BattleReader.Result r,Profile profile){
+        if(r.enemy==null)return "Ellenfél nem olvasható.\nEllenőrizd a név kijelölését (⚙).";
+        int[] enemy=dex.types(r.enemy,profile.generation);
+        StringBuilder s=new StringBuilder(Dex.display(r.enemy)).append(" · ").append(dex.typesText(enemy));
+        if(r.moves.isEmpty())return s.append("\nNyisd meg a támadásmenüt.").toString();
+        for(String name:r.moves){
+            Dex.Move m=dex.move(name,profile.generation);if(m==null)continue;
+            s.append("\n").append(Dex.display(name)).append(" · ");
+            s.append(m.category==1?"állapot":multiplier(BattleMath.effectiveness(m.type,enemy,profile.generation,dex.chart))+"×");
+        }
+        return s.toString();
+    }
     public static String describe(Dex dex,BattleReader.Result r,Profile profile) {
         if(r.enemy==null)return "Nem olvasható az ellenfél neve.\nÁllítsd be a név területét a profilban, vagy javítsd kézzel.";
         int[] enemy=dex.types(r.enemy,profile.generation),own=dex.types(r.own,profile.generation);

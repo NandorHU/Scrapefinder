@@ -5,6 +5,12 @@ import java.util.Arrays;
 import static org.junit.Assert.*;
 
 public class LiveScanTest {
+    @Test public void forceLoadRejectsPendingOcrAndRereadsEvenAnUnchangedScreen(){
+        ScanGate gate=new ScanGate();gate.observe(42);long old=gate.begin(0);
+        gate.invalidate();assertFalse(gate.finish(old));assertEquals(-1,gate.begin(300));
+        assertTrue(gate.observe(42));assertTrue(gate.finish(gate.begin(300)));
+        gate.invalidate();assertTrue(gate.observe(42));assertTrue(gate.finish(gate.begin(600)));
+    }
     @Test public void switchDuringOcrRejectsOldResultAndReadsNewestScene(){
         ScanGate gate=new ScanGate();assertTrue(gate.observe(1));long old=gate.begin(0);
         assertTrue(gate.observe(2));assertTrue(gate.observe(3));assertEquals(-1,gate.begin(300));
