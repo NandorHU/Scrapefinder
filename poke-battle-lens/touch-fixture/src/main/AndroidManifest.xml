@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
  <application android:theme="@android:style/Theme.Material.NoActionBar" android:label="Overlay touch test" android:allowBackup="false">
   <activity android:name=".TouchActivity" android:exported="true" />
+  <activity android:name=".BattleActivity" android:exported="true" />
  </application>
 </manifest>

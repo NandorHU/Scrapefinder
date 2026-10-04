@@ -42,6 +42,35 @@ public class BadgeOverlayTest {
             scenario.onActivity(a->{assertEquals(2,controls[0].profiles.getCount());assertTrue(controls[0].menu.forceLoad.isShown());controls[0].menu.forceLoad.performClick();assertEquals(1,reloads[0]);assertFalse(controls[0].expanded());layer[0].clear(true);assertEquals(0,layer[0].visibleCount(SystemClock.elapsedRealtime()));});
         }
     }
+    private AccessibilityNodeInfo findDescription(AccessibilityNodeInfo root,String contains){
+        if(root==null)return null;CharSequence description=root.getContentDescription();if(description!=null&&description.toString().contains(contains))return root;
+        for(int i=0;i<root.getChildCount();i++){AccessibilityNodeInfo found=findDescription(root.getChild(i),contains);if(found!=null)return found;}return null;
+    }
+    private AccessibilityNodeInfo waitDescription(String text,long timeout){
+        long end=SystemClock.uptimeMillis()+timeout;while(SystemClock.uptimeMillis()<end){for(android.view.accessibility.AccessibilityWindowInfo window:InstrumentationRegistry.getInstrumentation().getUiAutomation().getWindows()){AccessibilityNodeInfo found=findDescription(window.getRoot(),text);if(found!=null)return found;}SystemClock.sleep(100);}return null;
+    }
+    private boolean clickConsent(AccessibilityNodeInfo root){
+        if(root==null)return false;CharSequence text=root.getText();if(root.isClickable()&&text!=null&&(text.toString().equalsIgnoreCase("Start now")||text.toString().equalsIgnoreCase("Start recording")))return root.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        for(int i=0;i<root.getChildCount();i++)if(clickConsent(root.getChild(i)))return true;return false;
+    }
+    @Test public void liveProjectionKeepsStableBadgesAndFollowsPokemonSwitch() throws Exception{
+        SharedPreferences prefs=app().getSharedPreferences("lens",0);String old=prefs.getString("profiles",null);int oldIndex=prefs.getInt("active",0);long oldReload=prefs.getLong("reload",0);
+        UiAutomation automation=InstrumentationRegistry.getInstrumentation().getUiAutomation();android.accessibilityservice.AccessibilityServiceInfo original=automation.getServiceInfo();android.accessibilityservice.AccessibilityServiceInfo info=automation.getServiceInfo();info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;automation.setServiceInfo(info);
+        shell("appops set "+app().getPackageName()+" SYSTEM_ALERT_WINDOW allow");if(Build.VERSION.SDK_INT>=33)shell("pm grant "+app().getPackageName()+" android.permission.POST_NOTIFICATIONS");
+        Profile profile=new Profile("Live capture fixture");profile.enemy=new float[]{.02f,.08f,.72f,.33f};profile.own=new float[]{.45f,.30f,.98f,.52f};profile.moves=new float[]{.03f,.56f,.98f,.84f};Profile.save(app(),Arrays.asList(profile));prefs.edit().putInt("active",0).commit();Profile.requestReload(app());
+        try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)){
+            scenario.onActivity(a->{android.media.projection.MediaProjectionManager manager=a.getSystemService(android.media.projection.MediaProjectionManager.class);Intent consent=Build.VERSION.SDK_INT>=34?manager.createScreenCaptureIntent(android.media.projection.MediaProjectionConfig.createConfigForDefaultDisplay()):manager.createScreenCaptureIntent();a.startActivityForResult(consent,10);});
+            long end=SystemClock.uptimeMillis()+10000;boolean accepted=false;while(SystemClock.uptimeMillis()<end){if(clickConsent(automation.getRootInActiveWindow())){accepted=true;break;}SystemClock.sleep(100);}assertTrue("Real screen-sharing consent must be accepted",accepted);
+            // Wait until the service window exists before putting the synthetic game in front.
+            assertNotNull("Capture service must start",waitDescription("Hosszan nyomva",10000));
+            String fixture="hu.nandor.pokelens.fixture";app().startActivity(new Intent().setComponent(new ComponentName(fixture,fixture+".BattleActivity")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            assertNotNull("Real projection must read the game",waitDescription("Charizard",15000));
+            int stable=0;for(int i=0;i<20;i++){if(waitDescription("Charizard",300)!=null)stable++;SystemClock.sleep(150);}assertTrue("Own overlays must not create a recognition loop",stable>=12);
+            AccessibilityNodeInfo bubble=waitDescription("Charizard",5000);assertNotNull(bubble);assertTrue(bubble.performAction(AccessibilityNodeInfo.ACTION_CLICK));SystemClock.sleep(300);assertNotNull("Showing neutral badges must not pollute OCR",waitDescription("Tackle · 1×",5000));
+            android.util.DisplayMetrics metrics=app().getResources().getDisplayMetrics();float x=metrics.widthPixels*.2f,y=metrics.heightPixels*.7f;long down=SystemClock.uptimeMillis();MotionEvent press=MotionEvent.obtain(down,down,MotionEvent.ACTION_DOWN,x,y,0),release=MotionEvent.obtain(down,down+50,MotionEvent.ACTION_UP,x,y,0);press.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);release.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);automation.injectInputEvent(press,true);automation.injectInputEvent(release,true);press.recycle();release.recycle();
+            assertNotNull("Changed enemy and moves must replace old annotations",waitDescription("Swampert",15000));assertNotNull(waitDescription("Energy Ball · 4×",5000));assertNotNull(waitDescription("Thunderbolt · 0×",5000));
+        }finally{app().stopService(new Intent(app(),ScanService.class));shell("am force-stop hu.nandor.pokelens.fixture");shell("appops set "+app().getPackageName()+" SYSTEM_ALERT_WINDOW default");automation.setServiceInfo(original);SharedPreferences.Editor edit=prefs.edit().putInt("active",oldIndex).putLong("reload",oldReload);if(old==null)edit.remove("profiles");else edit.putString("profiles",old);edit.commit();}
+    }
     @Test public void translucentAnnotationLetsTapReachAnotherAppUid() throws Exception{
         String fixture="hu.nandor.pokelens.fixture";BadgeLayer[] layer={null};WindowManager manager=app().getSystemService(WindowManager.class);
         shell("appops set "+app().getPackageName()+" SYSTEM_ALERT_WINDOW allow");
