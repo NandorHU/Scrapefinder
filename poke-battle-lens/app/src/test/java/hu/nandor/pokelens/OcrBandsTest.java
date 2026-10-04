@@ -27,10 +27,14 @@ public class OcrBandsTest {
         int[] p=background(0xffffffff);assertTrue(OcrBands.find(p,400,300).isEmpty());ink(p,40,100,10,20,0xffeeeeee);assertTrue(OcrBands.find(p,400,300).isEmpty());
         ink(p,40,50,200,2,0xff000000);assertTrue(OcrBands.find(p,400,300).isEmpty());
     }
+    @Test public void paleMoveOutsideStrongTextRowsIsNotCroppedAway(){
+        int[] p=background(0xffffffff);ink(p,40,100,10,20,0xff000000);ink(p,300,190,10,20,0xffdddddd);assertTrue(OcrBands.find(p,400,300).isEmpty());
+        p=background(0xffffffff);ink(p,40,100,10,20,0xff000000);ink(p,300,100,10,20,0xffdddddd);assertTrue(OcrBands.find(p,400,300).isEmpty());
+    }
     @Test public void shortGapsInsideLettersAreNotSeparateTextRows(){
         int[] p=background(0xffffffff);ink(p,40,100,10,10,0xff000000);ink(p,40,114,10,10,0xff000000);List<OcrBands.Band> b=OcrBands.find(p,400,300);assertEquals(1,b.size());assertEquals(24,b.get(0).inkHeight);
     }
-    @Test public void TooManyRowsAndInvalidBuffersUseFallback(){
+    @Test public void tooManyRowsAndInvalidBuffersUseFallback(){
         int[] p=background(0xffffffff);for(int y=5;y<270;y+=28)ink(p,40,y,10,10,0xff000000);assertTrue(OcrBands.find(p,400,300).isEmpty());assertTrue(OcrBands.find(new int[0],10,10).isEmpty());
     }
 }

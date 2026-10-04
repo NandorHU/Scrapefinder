@@ -26,7 +26,16 @@ final class OcrBands {
             }
         }
         if(start>=0&&!append(bands,start,end,l,rt,w,h))return Collections.emptyList();
-        return bands.size()<=8?bands:Collections.emptyList();
+        if(bands.isEmpty()||bands.size()>8)return Collections.emptyList();
+        // A pale/disabled move may sit beside strong black text. Keep the whole
+        // region if any lower-contrast content would fall outside the packed rows.
+        for(int y=0;y<h;y++)for(int x=0;x<w;x++){
+            int c=pixels[y*w+x];int delta=Math.max(Math.abs(((c>>16)&255)-r),Math.max(Math.abs(((c>>8)&255)-g),Math.abs((c&255)-b)));
+            if(delta<=16)continue;boolean covered=false;
+            for(Band band:bands)if(x>=band.left&&x<band.right&&y>=band.top&&y<band.bottom){covered=true;break;}
+            if(!covered)return Collections.emptyList();
+        }
+        return bands;
     }
     private static boolean append(List<Band> out,int top,int bottom,int left,int right,int w,int h){
         int inkHeight=bottom-top+1;
