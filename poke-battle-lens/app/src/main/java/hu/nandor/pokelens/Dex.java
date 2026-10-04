@@ -8,6 +8,8 @@ public final class Dex {
     public final Map<String, JSONObject> pokemon = new LinkedHashMap<>(), moves = new LinkedHashMap<>();
     private final Map<String,String> aliases=new LinkedHashMap<>();
     public final Map<Integer,String> typeNames = new HashMap<>();
+    private final Set<String> names;
+    private final NameMatcher.Index pokemonIndex,moveIndex;
     public final int[][] chart = new int[18][18];
     public Dex(Context context) throws Exception { this(read(context)); }
     public Dex(String json) throws Exception {
@@ -18,12 +20,15 @@ public final class Dex {
         JSONObject aliasesJson=data.optJSONObject("aliases");if(aliasesJson!=null){Iterator<String> ak=aliasesJson.keys();while(ak.hasNext()){String key=ak.next();aliases.put(key,aliasesJson.getString(key));}}
         for(int i=0;i<m.length();i++){JSONObject r=m.getJSONObject(i);moves.put(r.getString("name"),r);}
         for(int i=0;i<18;i++) for(int j=0;j<18;j++) chart[i][j]=c.getJSONArray(i).getInt(j);
+        Set<String> all=new LinkedHashSet<>(pokemon.keySet());all.addAll(aliases.keySet());names=Collections.unmodifiableSet(all);
+        pokemonIndex=new NameMatcher.Index(names);moveIndex=new NameMatcher.Index(moves.keySet());
     }
     private static String read(Context c) throws IOException {
         try(InputStream in=c.getAssets().open("dex.json")){ ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int count;while((count=in.read(buffer))!=-1)out.write(buffer,0,count);return out.toString("UTF-8"); }
     }
-    public Set<String> pokemonNames(){Set<String> names=new LinkedHashSet<>(pokemon.keySet());names.addAll(aliases.keySet());return names;}
-    public String matchPokemon(String text){String n=NameMatcher.match(text,pokemonNames());return n==null?null:aliases.getOrDefault(n,n);}
+    public Set<String> pokemonNames(){return names;}
+    public String matchPokemon(String text){String n=pokemonIndex.match(text);return n==null?null:aliases.getOrDefault(n,n);}
+    public String matchMove(String text){return moveIndex.match(text);}
     public int[] types(String name, int generation) {
         JSONObject p=pokemon.get(name); if(p==null)return new int[0];
         JSONArray selected=p.optJSONArray("types"); JSONObject past=p.optJSONObject("past"); int best=100;

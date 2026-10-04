@@ -34,4 +34,18 @@ public class ScreenshotOcrTest {
         CountDownLatch latch=new CountDownLatch(1);BattleReader.Result[] result=new BattleReader.Result[1];Exception[] errors=new Exception[1];BattleReader reader=new BattleReader(dex);reader.scan(frame,new Profile("synthetic"),new BattleReader.Callback(){public void done(BattleReader.Result r){result[0]=r;latch.countDown();}public void error(Exception e){errors[0]=e;latch.countDown();}});
         assertTrue(latch.await(90,TimeUnit.SECONDS));assertNull(errors[0]);assertEquals("toucannon",result[0].enemy);assertEquals("swampert",result[0].own);assertEquals(4,result[0].moves.size());reader.close();frame.recycle();
     }
+    @Test public void pokemonSwitchRefreshesNamesAndAllMoves() throws Exception {
+        Context app=InstrumentationRegistry.getInstrumentation().getTargetContext();BattleReader reader=new BattleReader(new Dex(app));
+        String[][] states={{"HARIYAMA","SWAMPERT","MUD BOMB","MUDDY WATER","MEGA PUNCH","ROCK SMASH"},{"TOUCANNON","LICKITUNG","ZEN HEADBUTT","BULLDOZE","CHIP AWAY","DISABLE"}};
+        try{for(String[] state:states){
+            Bitmap frame=Bitmap.createBitmap(900,1600,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(frame);c.drawColor(Color.WHITE);Paint ink=new Paint(Paint.ANTI_ALIAS_FLAG);ink.setColor(Color.BLACK);ink.setTextSize(38);ink.setTypeface(Typeface.DEFAULT_BOLD);
+            c.drawText(state[0],60,270,ink);c.drawText(state[1],510,480,ink);c.drawText(state[2],40,800,ink);c.drawText(state[3],40,850,ink);c.drawText(state[4],500,800,ink);c.drawText(state[5],500,850,ink);
+            CountDownLatch latch=new CountDownLatch(1);BattleReader.Result[] result=new BattleReader.Result[1];Exception[] errors=new Exception[1];
+            reader.scan(frame,new Profile("switch"),new BattleReader.Callback(){public void done(BattleReader.Result r){result[0]=r;latch.countDown();}public void error(Exception e){errors[0]=e;latch.countDown();}});
+            assertTrue(latch.await(90,TimeUnit.SECONDS));assertNull(errors[0]);assertNotNull(result[0]);
+            assertEquals(state[0].toLowerCase(java.util.Locale.ROOT),result[0].enemy);assertEquals(state[1].toLowerCase(java.util.Locale.ROOT),result[0].own);
+            java.util.Set<String> expected=new java.util.HashSet<>();for(int i=2;i<6;i++)expected.add(state[i].toLowerCase(java.util.Locale.ROOT).replace(' ','-'));
+            assertEquals(expected,new java.util.HashSet<>(result[0].moves));frame.recycle();
+        }}finally{reader.close();}
+    }
 }

@@ -18,7 +18,9 @@ public final class ScanService extends Service {
     private final Handler main=new Handler(Looper.getMainLooper());
     private MediaProjection projection;private VirtualDisplay display;private ImageReader images;private BattleReader reader;private Dex dex;
     private WindowManager windows;private LinearLayout overlay;private TextView body,status;private ScrollView scroll;private WindowManager.LayoutParams params;
-    private boolean paused=false,collapsed=false,busy=false,stopped=false;private long lastScan=0;private int width,height;private String lastProfile="";
+    private boolean paused=false,collapsed=false,stopped=false;private int width,height;private String lastProfile="",profileKey="";
+    private final ScanGate gate=new ScanGate();private Bitmap latestFrame;private Profile latestProfile;
+    private final Runnable poll=new Runnable(){public void run(){if(stopped)return;frame();if(!stopped)main.postDelayed(this,100);}};
     @Override public IBinder onBind(Intent intent){return null;}
     @Override public int onStartCommand(Intent intent,int flags,int startId){
         if(intent==null||"STOP".equals(intent.getAction())){stopSelf();return START_NOT_STICKY;}
@@ -41,39 +43,68 @@ public final class ScanService extends Service {
             android.util.DisplayMetrics metrics=new android.util.DisplayMetrics();windows.getDefaultDisplay().getRealMetrics(metrics);
             width=metrics.widthPixels;height=metrics.heightPixels;createReader();
             display=projection.createVirtualDisplay("Poké Battle Lens",width,height,getResources().getDisplayMetrics().densityDpi,DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,images.getSurface(),null,main);
+            main.post(poll);
         }catch(Exception e){Toast.makeText(this,"A figyelés nem indult el: "+e.getMessage(),Toast.LENGTH_LONG).show();stopSelf();}
         return START_NOT_STICKY;
     }
-    private void createReader(){images=ImageReader.newInstance(width,height,PixelFormat.RGBA_8888,2);images.setOnImageAvailableListener(this::frame,main);}
+    private void createReader(){images=ImageReader.newInstance(width,height,PixelFormat.RGBA_8888,2);}
     private void resize(int w,int h){
-        width=w;height=h;if(display==null)return;
+        width=w;height=h;gate.invalidate();discardFrame();if(display==null)return;
         ImageReader old=images;createReader();display.resize(w,h,getResources().getDisplayMetrics().densityDpi);display.setSurface(images.getSurface());old.close();
         if(body!=null)body.setText("A képernyő mérete változott. Ellenőrizd, hogy az aktuális profil területei illeszkednek.");
         if(params!=null&&overlay!=null){params.x=0;params.y=Ui.dp(this,48);windows.updateViewLayout(overlay,params);}
     }
     @Override public void onConfigurationChanged(Configuration config){super.onConfigurationChanged(config);if(Build.VERSION.SDK_INT<34&&windows!=null&&projection!=null){android.util.DisplayMetrics metrics=new android.util.DisplayMetrics();windows.getDefaultDisplay().getRealMetrics(metrics);if(metrics.widthPixels!=width||metrics.heightPixels!=height)resize(metrics.widthPixels,metrics.heightPixels);}}
-    private void frame(ImageReader source){
-        Image image=null;
-        try {
-            image=source.acquireLatestImage();if(image==null)return;
-            if(stopped||paused||busy||SystemClock.elapsedRealtime()-lastScan<1500)return;
-            busy=true;lastScan=SystemClock.elapsedRealtime();
-            Image.Plane plane=image.getPlanes()[0];int pixel=plane.getPixelStride(),stride=plane.getRowStride(),w=image.getWidth(),h=image.getHeight();
-            ByteBuffer buffer=plane.getBuffer();Bitmap padded=Bitmap.createBitmap(stride/pixel,h,Bitmap.Config.ARGB_8888);padded.copyPixelsFromBuffer(buffer);Bitmap bitmap=Bitmap.createBitmap(padded,0,0,w,h);if(bitmap!=padded)padded.recycle();
-            Profile profile=Profile.active(this);lastProfile=profile.name;
-            reader.scan(bitmap,profile,new BattleReader.Callback(){
-                public void done(BattleReader.Result result){
-                    try{if(!stopped&&!paused&&profile.json().toString().equals(Profile.active(ScanService.this).json().toString())){body.setText(BattleSummary.describe(dex,result,profile));status.setText((paused?"Szünet":"OCR • ")+profile.name+(profile.manualEnemy.trim().isEmpty()&&profile.manualMoves.trim().isEmpty()&&profile.manualOwn.trim().isEmpty()?"":" • KÉZI"));}}finally{bitmap.recycle();busy=false;if(stopped&&reader!=null)reader.close();}
+    private void discardFrame(){if(latestFrame!=null){latestFrame.recycle();latestFrame=null;}latestProfile=null;}
+    private void changing(){if(!paused&&body!=null){status.setText("Változás • "+lastProfile);body.setText("Új Pokémon / támadáslista felismerése…");}}
+    /** Inspect current regions even while OCR is busy, so old callbacks are invalidated. */
+    private void frame(){
+        Image image=null;boolean starting=false;
+        try{
+            Profile profile=Profile.active(this);String key=profile.json().toString();
+            if(!key.equals(profileKey)){profileKey=key;lastProfile=profile.name;gate.invalidate();discardFrame();changing();}
+            if(images!=null)image=images.acquireLatestImage();
+            if(image!=null){
+                Image.Plane plane=image.getPlanes()[0];int pixel=plane.getPixelStride(),stride=plane.getRowStride(),w=image.getWidth(),h=image.getHeight();
+                ByteBuffer buffer=plane.getBuffer();int[][] regions=new int[3][];String[] names={"enemy","own","moves"};
+                for(int i=0;i<3;i++){Rect r=profile.crop(names[i],w,h);regions[i]=new int[]{r.left,r.top,r.right,r.bottom};}
+                long fingerprint=SceneFingerprint.rgba(buffer,stride,pixel,regions);
+                if(gate.observe(fingerprint)){
+                    discardFrame();changing();
+                    Bitmap padded=Bitmap.createBitmap(stride/pixel,h,Bitmap.Config.ARGB_8888);
+                    try{buffer.rewind();padded.copyPixelsFromBuffer(buffer);latestFrame=Bitmap.createBitmap(padded,0,0,w,h);}
+                    finally{if(padded!=latestFrame)padded.recycle();}
+                    latestProfile=profile;
                 }
-                public void error(Exception e){try{if(!stopped){status.setText("OCR-hiba");body.setText("Nem sikerült olvasni a képernyőt. "+e.getMessage());}}finally{bitmap.recycle();busy=false;if(stopped&&reader!=null)reader.close();}}
-            });
-        }catch(Exception e){busy=false;if(!stopped&&body!=null)body.setText("Képernyőolvasási hiba: "+e.getMessage());}
+            }
+            if(!paused&&latestFrame!=null){
+                final long revision=gate.begin(SystemClock.elapsedRealtime());
+                if(revision>=0){
+                    final Profile scannedProfile=latestProfile;final String scannedKey=profileKey;
+                    starting=true;reader.scan(latestFrame,scannedProfile,new BattleReader.Callback(){
+                        public void done(BattleReader.Result result){
+                            boolean current=gate.finish(revision);
+                            if(stopped){reader.close();return;}
+                            if(current&&!paused&&scannedKey.equals(Profile.active(ScanService.this).json().toString())){
+                                body.setText(BattleSummary.describe(dex,result,scannedProfile));
+                                status.setText("Élő OCR • "+scannedProfile.name+(scannedProfile.manualEnemy.trim().isEmpty()&&scannedProfile.manualMoves.trim().isEmpty()&&scannedProfile.manualOwn.trim().isEmpty()?"":" • KÉZI"));
+                            }
+                        }
+                        public void error(Exception e){
+                            boolean current=gate.finish(revision);gate.failed();gate.refresh();
+                            if(stopped){reader.close();return;}
+                            if(current&&!paused&&scannedKey.equals(Profile.active(ScanService.this).json().toString())){status.setText("OCR-hiba – újrapróbálás");body.setText("Nem sikerült olvasni a képernyőt. "+e.getMessage());}
+                        }
+                    });starting=false;
+                }
+            }
+        }catch(Exception e){if(starting)gate.failed();gate.invalidate();discardFrame();if(!stopped&&!paused&&body!=null)body.setText("Képernyőolvasási hiba: "+e.getMessage());}
         finally{if(image!=null)image.close();}
     }
     private void makeOverlay(){
         overlay=new LinearLayout(this);overlay.setOrientation(LinearLayout.VERTICAL);overlay.setPadding(Ui.dp(this,10),Ui.dp(this,8),Ui.dp(this,10),Ui.dp(this,8));overlay.setBackground(Ui.rounded(Ui.CARD,this));overlay.setElevation(Ui.dp(this,12));
         status=Ui.text(this,"Poké Battle Lens • húzható",12,Ui.ACCENT);overlay.addView(status);LinearLayout row=new LinearLayout(this);
-        Button pause=small("Ⅱ",()->{paused=!paused;status.setText(paused?"Szünet – az eredmény nem frissül":"OCR • "+lastProfile);if(paused&&body!=null)body.setText("Figyelés szünetel. Folytatáshoz nyomd meg újra a Ⅱ gombot.");});
+        Button pause=small("Ⅱ",()->{paused=!paused;gate.refresh();status.setText(paused?"Szünet – az eredmény nem frissül":"Felismerés • "+lastProfile);body.setText(paused?"Figyelés szünetel. Folytatáshoz nyomd meg újra a Ⅱ gombot.":"Az aktuális Pokémonok és támadások felismerése…");});
         Button fold=small("▾",()->{collapsed=!collapsed;scroll.setVisibility(collapsed?View.GONE:View.VISIBLE);windows.updateViewLayout(overlay,params);});
         Button settings=small("⚙",()->{Intent i=new Intent(this,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);startActivity(i);});Button close=small("×",this::stopSelf);
         row.addView(pause);row.addView(fold);row.addView(settings);row.addView(close);overlay.addView(row);
@@ -84,6 +115,6 @@ public final class ScanService extends Service {
     }
     private Button small(String text,Runnable action){Button b=Ui.button(this,text,action);b.setTextSize(16);b.setMinWidth(0);b.setMinimumWidth(0);b.setMinHeight(0);b.setMinimumHeight(0);b.setLayoutParams(new LinearLayout.LayoutParams(0,Ui.dp(this,40),1));return b;}
     @Override public void onDestroy(){
-        stopped=true;if(display!=null){display.release();display=null;}if(images!=null){images.close();images=null;}if(projection!=null){projection.stop();projection=null;}if(reader!=null&&!busy)reader.close();if(overlay!=null&&windows!=null){try{windows.removeView(overlay);}catch(Exception ignored){}overlay=null;}stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();
+        stopped=true;main.removeCallbacks(poll);gate.invalidate();discardFrame();if(display!=null){display.release();display=null;}if(images!=null){images.close();images=null;}if(projection!=null){projection.stop();projection=null;}if(reader!=null&&!gate.isBusy())reader.close();if(overlay!=null&&windows!=null){try{windows.removeView(overlay);}catch(Exception ignored){}overlay=null;}stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();
     }
 }

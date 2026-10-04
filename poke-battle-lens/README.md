@@ -5,6 +5,8 @@ Magyar nyelvű, helyben működő Pokémon csatasegéd. Android 8.0+.
 ## Funkciók
 
 - Teljes képernyő megosztása Android MediaProjection API-val; nincs root vagy Accessibility-engedély.
+- Folyamatos figyelés: 100 ms-os képernyőellenőrzés a három kijelölt területen, változáskor új felismerés. Egyszerre egy OCR-kérés, legalább 300 ms az indítások között; változatlan képnél 2 másodperces tartalék frissítés. A tényleges felismerési idő telefonfüggő, a 100 ms nem válaszidő-garancia.
+- Pokémon- vagy támadásváltáskor az előző eredmény azonnal törlődik a változás észlelésekor. A közben elavult OCR-válaszokat eldobja.
 - Beépített, offline ML Kit OCR (angol Pokémon- és támadásnevek).
 - 1351 Pokémon-forma, 919 támadás, két típus együttes szorzója.
 - Húzható, összecsukható lebegő ablak; szünet és azonnali leállítás.
@@ -20,7 +22,9 @@ Magyar nyelvű, helyben működő Pokémon csatasegéd. Android 8.0+.
 4. Jelöld ki az ellenfél nevét, a saját Pokémon nevét és a négy támadást. Csak a neveket jelöld ki: ne a szintet/HP-t.
 5. Válaszd a játék generációját, teszteld a képet, ments.
 6. Engedélyezd a más appok feletti megjelenítést, majd indítsd a figyelést és engedélyezd a képernyőmegosztást.
-7. Válts a játékra. Húzd a lebegő ablakot a név/támadás-területeken kívülre.
+7. Válts a játékra. Pokémonváltáskor nem kell új képernyőképet készíteni: a látható nevek és támadások automatikusan frissülnek. Húzd a lebegő ablakot a név/támadás-területeken kívülre.
+
+Automatikus követéshez a kézi névjavításokat töröld az **Automatikus mód** gombbal. A támadáslista legyen látható: a rejtett támadásokat az app nem tudja kiolvasni. Szorosan a nevekre kalibrálj, hogy a csata animációi ne indítsanak felesleges újraolvasást.
 
 A Dungeons & Pokémon álló profil a mellékelt példa elrendezését közelíti. A címsáv, kijelzőméret és görgetés miatt a saját képernyőképeden igazítsd. A GBA fekvő profil kiindulási példa; kalibrálni kell. Álló/fekvő elrendezéshez külön profil javasolt. Kézi javítás után az értékek fixen megmaradnak; töröld őket az **Automatikus mód** gombbal a következő ellenfélnél.
 
@@ -42,7 +46,7 @@ Képkockák csak RAM-ban, helyben kerülnek feldolgozásra; nem mentjük vagy k�
 
 JDK 17, Android SDK 35, Gradle 8.9. `./gradlew testDebugUnitTest lintDebug assembleDebug`.
 
-A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.1.0.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
+A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.2.0.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
 
 ## Forrásadatok
 
