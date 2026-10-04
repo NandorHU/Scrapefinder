@@ -24,7 +24,7 @@ public final class ScanService extends Service {
     private final ScanGate gate=new ScanGate();private final CleanCapture capture=new CleanCapture();private List<int[]> badgeMasks=new ArrayList<>();private BattleReader.Result lastResult;
     private final BattlePresence presence=new BattlePresence();
     private long startedAt,scanStartedAt,scanSerial,lastBusyFrameAt;private boolean noFrameReported,revealWhenReady,readerReady,warmingReported;
-    private ByteBuffer cachedFrame;private int cachedStride,cachedPixel,cachedWidth,cachedHeight;private boolean cachedDirty;
+    private ByteBuffer cachedFrame;private int cachedStride,cachedPixel,cachedWidth,cachedHeight;private boolean cachedDirty,cachedHashPending;
     private String statusTitle="Olvasás",statusText="Pokémonok és támadások felismerése…";
     private final Runnable poll=new Runnable(){public void run(){if(stopped)return;frame();if(!stopped)main.postDelayed(this,100);}};
     @Override public IBinder onBind(Intent intent){return null;}
@@ -71,7 +71,7 @@ public final class ScanService extends Service {
     private void retainFrame(Image image,boolean dirty){
         Image.Plane plane=image.getPlanes()[0];cachedStride=plane.getRowStride();cachedPixel=plane.getPixelStride();cachedWidth=image.getWidth();cachedHeight=image.getHeight();
         int size=cachedStride*cachedHeight;if(cachedFrame==null||cachedFrame.capacity()!=size)cachedFrame=ByteBuffer.allocate(size);
-        ByteBuffer source=plane.getBuffer();source.rewind();cachedFrame.clear();cachedFrame.put(source);cachedFrame.rewind();cachedDirty=dirty;
+        ByteBuffer source=plane.getBuffer();source.rewind();cachedFrame.clear();cachedFrame.put(source);cachedFrame.rewind();cachedDirty=dirty;cachedHashPending=true;
     }
     private void ocrTimeout(){
         scanSerial++;scanStartedAt=0;gate.failed();gate.invalidate();cancelCapture();clearResult(true);presence.reset();cachedFrame=null;startedAt=SystemClock.elapsedRealtime();noFrameReported=false;
@@ -99,9 +99,11 @@ public final class ScanService extends Service {
             if(gate.isBusy()){if(now-lastBusyFrameAt<500)return;lastBusyFrameAt=now;}
             if(images!=null)image=images.acquireLatestImage();
             int[][] areas=regions(profile,width,height);
-            if(image!=null){Image.Plane plane=image.getPlanes()[0];lastTimestamp=image.getTimestamp();noFrameReported=false;gate.observe(SceneFingerprint.rgba(plane.getBuffer(),plane.getRowStride(),plane.getPixelStride(),areas,masks()));retainFrame(image,capture.waiting()||badges.visibleCount(now)>0||controlOverlaps(areas));}
-            else if(cachedFrame!=null&&!gate.hasFrame()){gate.observe(SceneFingerprint.rgba(cachedFrame,cachedStride,cachedPixel,areas,masks()));}
-            else if(cachedFrame==null&&!noFrameReported&&now-startedAt>3500){noFrameReported=true;clearResult(true);presence.reset();message("Nincs képkocka","A megosztásból nem érkezik kép. Indítsd újra a figyelést, és válaszd a teljes képernyő megosztását.","?");}
+            if(image!=null){lastTimestamp=image.getTimestamp();noFrameReported=false;retainFrame(image,capture.waiting()||badges.visibleCount(now)>0||controlOverlaps(areas));}
+            // No pixel sampling while native OCR is running. The copied latest frame
+            // is sampled once afterwards, from a heap array instead of a direct image plane.
+            if(cachedFrame!=null&&!gate.isBusy()&&(cachedHashPending||!gate.hasFrame())){gate.observe(SceneFingerprint.rgba(cachedFrame,cachedStride,cachedPixel,areas,masks()));cachedHashPending=false;}
+            if(cachedFrame==null&&!noFrameReported&&now-startedAt>3500){noFrameReported=true;clearResult(true);presence.reset();message("Nincs képkocka","A megosztásból nem érkezik kép. Indítsd újra a figyelést, és válaszd a teljes képernyő megosztását.","?");}
             if(capture.timedOut(now)){android.util.Log.w(TAG,"Fresh capture timeout; timestamp="+lastTimestamp+", size="+width+"x"+height);cancelCapture();gate.refresh();clearResult(true);presence.reset();cachedFrame=null;message("Nincs friss képkocka","A jelzések elrejtése után nem érkezett új kép. A korábbi jelzéseket töröltem; újrapróbálás.","?");return;}
             if(!capture.waiting()){
                 if(!gate.canBegin(now)||cachedFrame==null)return;

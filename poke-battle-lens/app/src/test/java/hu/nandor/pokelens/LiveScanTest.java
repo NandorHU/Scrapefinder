@@ -45,6 +45,12 @@ public class LiveScanTest {
         rgba.put(4*48+4*4+3,(byte)255);assertEquals(original,SceneFingerprint.rgba(rgba,48,4,regions));
         rgba.put(4*48+4*4+1,(byte)128);assertNotEquals(original,SceneFingerprint.rgba(rgba,48,4,regions));
     }
+    @Test public void cachedArrayAndDirectImagePlaneHaveIdenticalFingerprintsIncludingSlices(){
+        ByteBuffer storage=ByteBuffer.allocate(48*8+13);storage.position(13);ByteBuffer heap=storage.slice();for(int i=0;i<48*8;i++)heap.put(i,(byte)(i*37));
+        ByteBuffer direct=ByteBuffer.allocateDirect(48*8);direct.put(heap.duplicate());direct.rewind();int[][] regions={{1,1,7,7}},excluded={{3,3,5,5}};
+        assertEquals(SceneFingerprint.rgba(direct,48,4,regions,excluded),SceneFingerprint.rgba(heap,48,4,regions,excluded));
+        assertEquals(SceneFingerprint.rgba(direct,48,4,regions,excluded),SceneFingerprint.rgba(heap.asReadOnlyBuffer(),48,4,regions,excluded));
+    }
     @Test public void indexedNamesPreserveDigitsAndRejectAmbiguousTypos(){
         NameMatcher.Index names=new NameMatcher.Index(Arrays.asList("porygon","porygon2","porygon-z","catfish","batfish"));
         assertEquals("porygon2",names.match("PORYGON2 Lv 20"));assertEquals("porygon-z",names.match("PORYGON Z"));
