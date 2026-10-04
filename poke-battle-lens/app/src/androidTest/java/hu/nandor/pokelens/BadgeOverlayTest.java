@@ -50,9 +50,12 @@ public class BadgeOverlayTest {
         long end=SystemClock.uptimeMillis()+timeout;while(SystemClock.uptimeMillis()<end){for(android.view.accessibility.AccessibilityWindowInfo window:InstrumentationRegistry.getInstrumentation().getUiAutomation().getWindows()){AccessibilityNodeInfo found=findDescription(window.getRoot(),text);if(found!=null)return found;}SystemClock.sleep(100);}return null;
     }
     private boolean clickConsent(AccessibilityNodeInfo root){
-        if(root==null)return false;CharSequence text=root.getText();if(root.isClickable()&&text!=null&&(text.toString().equalsIgnoreCase("Start now")||text.toString().equalsIgnoreCase("Start recording")))return root.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        if(root==null)return false;String owner=String.valueOf(root.getPackageName()),id=String.valueOf(root.getViewIdResourceName());CharSequence raw=root.getText();String text=raw==null?"":raw.toString().trim().toLowerCase(java.util.Locale.ROOT);
+        boolean positive=owner.equals("com.android.systemui")&&(id.endsWith(":id/button1")||id.endsWith(":id/start_button")||java.util.Arrays.asList("start now","start recording","share screen","share","start","continue").contains(text));
+        if(positive){AccessibilityNodeInfo button=root;while(button!=null&&!button.isClickable())button=button.getParent();if(button!=null&&button.performAction(AccessibilityNodeInfo.ACTION_CLICK))return true;}
         for(int i=0;i<root.getChildCount();i++)if(clickConsent(root.getChild(i)))return true;return false;
     }
+    private String describeConsent(AccessibilityNodeInfo node,int depth){if(node==null||depth>5)return "";StringBuilder s=new StringBuilder();s.append("[").append(node.getViewIdResourceName()).append(" ").append(node.getText()).append(" click=").append(node.isClickable()).append("]");for(int i=0;i<node.getChildCount();i++)s.append(describeConsent(node.getChild(i),depth+1));return s.toString();}
     @Test public void liveProjectionKeepsStableBadgesAndFollowsPokemonSwitch() throws Exception{
         SharedPreferences prefs=app().getSharedPreferences("lens",0);String old=prefs.getString("profiles",null);int oldIndex=prefs.getInt("active",0);long oldReload=prefs.getLong("reload",0);
         UiAutomation automation=InstrumentationRegistry.getInstrumentation().getUiAutomation();android.accessibilityservice.AccessibilityServiceInfo original=automation.getServiceInfo();android.accessibilityservice.AccessibilityServiceInfo info=automation.getServiceInfo();info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;automation.setServiceInfo(info);
@@ -60,7 +63,7 @@ public class BadgeOverlayTest {
         Profile profile=new Profile("Live capture fixture");profile.enemy=new float[]{.02f,.08f,.72f,.33f};profile.own=new float[]{.45f,.30f,.98f,.52f};profile.moves=new float[]{.03f,.56f,.98f,.84f};Profile.save(app(),Arrays.asList(profile));prefs.edit().putInt("active",0).commit();Profile.requestReload(app());
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)){
             scenario.onActivity(a->{android.media.projection.MediaProjectionManager manager=a.getSystemService(android.media.projection.MediaProjectionManager.class);Intent consent=Build.VERSION.SDK_INT>=34?manager.createScreenCaptureIntent(android.media.projection.MediaProjectionConfig.createConfigForDefaultDisplay()):manager.createScreenCaptureIntent();a.startActivityForResult(consent,10);});
-            long end=SystemClock.uptimeMillis()+10000;boolean accepted=false;while(SystemClock.uptimeMillis()<end){if(clickConsent(automation.getRootInActiveWindow())){accepted=true;break;}SystemClock.sleep(100);}assertTrue("Real screen-sharing consent must be accepted",accepted);
+            long end=SystemClock.uptimeMillis()+10000;boolean accepted=false;while(SystemClock.uptimeMillis()<end){if(clickConsent(automation.getRootInActiveWindow())){accepted=true;break;}SystemClock.sleep(100);}assertTrue("Real screen-sharing consent must be accepted: "+describeConsent(automation.getRootInActiveWindow(),0),accepted);
             // Wait until the service window exists before putting the synthetic game in front.
             assertNotNull("Capture service must start",waitDescription("Hosszan nyomva",10000));
             String fixture="hu.nandor.pokelens.fixture";app().startActivity(new Intent().setComponent(new ComponentName(fixture,fixture+".BattleActivity")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
