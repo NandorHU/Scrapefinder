@@ -52,7 +52,7 @@ public final class ScanService extends Service {
         width=w;height=h;gate.invalidate();discardFrame();if(display==null)return;
         ImageReader old=images;createReader();display.resize(w,h,getResources().getDisplayMetrics().densityDpi);display.setSurface(images.getSurface());old.close();
         if(body!=null)body.setText("A képernyő mérete változott. Ellenőrizd, hogy az aktuális profil területei illeszkednek.");
-        if(params!=null&&overlay!=null){params.x=0;params.y=Ui.dp(this,48);windows.updateViewLayout(overlay,params);}
+        if(params!=null&&overlay!=null){params.width=Math.min(Ui.dp(this,OverlayPanel.WIDTH_DP),width);params.x=Math.max(0,width-params.width);params.y=Math.max(0,height-Ui.dp(this,220));windows.updateViewLayout(overlay,params);}
     }
     @Override public void onConfigurationChanged(Configuration config){super.onConfigurationChanged(config);if(Build.VERSION.SDK_INT<34&&windows!=null&&projection!=null){android.util.DisplayMetrics metrics=new android.util.DisplayMetrics();windows.getDefaultDisplay().getRealMetrics(metrics);if(metrics.widthPixels!=width||metrics.heightPixels!=height)resize(metrics.widthPixels,metrics.heightPixels);}}
     private void discardFrame(){if(latestFrame!=null){latestFrame.recycle();latestFrame=null;}latestProfile=null;}
@@ -94,7 +94,7 @@ public final class ScanService extends Service {
                             if(stopped){reader.close();return;}
                             if(current&&!paused&&scannedKey.equals(Profile.active(ScanService.this).json().toString())){
                                 body.setText(BattleSummary.compact(dex,result,scannedProfile));
-                                status.setText("Élő · "+scannedProfile.name+(scannedProfile.manualEnemy.trim().isEmpty()&&scannedProfile.manualMoves.trim().isEmpty()&&scannedProfile.manualOwn.trim().isEmpty()?"":" • KÉZI"));
+                                status.setText((scannedProfile.manualEnemy.trim().isEmpty()&&scannedProfile.manualMoves.trim().isEmpty()&&scannedProfile.manualOwn.trim().isEmpty()?"Élő · ":"Kézi · ")+scannedProfile.name);
                             }
                         }
                         public void error(Exception e){
@@ -118,6 +118,12 @@ public final class ScanService extends Service {
         params=new WindowManager.LayoutParams(Math.min(Ui.dp(this,OverlayPanel.WIDTH_DP),width),WindowManager.LayoutParams.WRAP_CONTENT,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,PixelFormat.TRANSLUCENT);
         params.gravity=Gravity.TOP|Gravity.LEFT;params.x=Math.max(0,width-params.width);params.y=Math.max(0,height-Ui.dp(this,220));
         status.setOnTouchListener(new View.OnTouchListener(){int x,y;float dx,dy;public boolean onTouch(View v,android.view.MotionEvent event){switch(event.getAction()){case MotionEvent.ACTION_DOWN:x=params.x;y=params.y;dx=event.getRawX();dy=event.getRawY();return true;case MotionEvent.ACTION_MOVE:params.x=Math.max(0,Math.min(width-overlay.getWidth(),x+(int)(event.getRawX()-dx)));params.y=Math.max(0,Math.min(height-overlay.getHeight(),y+(int)(event.getRawY()-dy)));windows.updateViewLayout(overlay,params);return true;case MotionEvent.ACTION_UP:v.performClick();return true;}return false;}});
+        overlay.addOnLayoutChangeListener((v,l,t,r,b,oldL,oldT,oldR,oldB)->{
+            if(stopped)return;
+            int x=Math.max(0,Math.min(Math.max(0,width-overlay.getWidth()),params.x));
+            int y=Math.max(0,Math.min(Math.max(0,height-overlay.getHeight()),params.y));
+            if(x!=params.x||y!=params.y){params.x=x;params.y=y;windows.updateViewLayout(overlay,params);}
+        });
         windows.addView(overlay,params);
     }
     @Override public void onDestroy(){
