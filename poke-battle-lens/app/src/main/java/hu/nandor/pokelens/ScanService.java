@@ -23,7 +23,7 @@ public final class ScanService extends Service {
     private boolean paused,menuOpen,stopped;private long reloadToken,lastTimestamp;private int width,height;private String profileKey="",lastProfile="";
     private final ScanGate gate=new ScanGate();private final CleanCapture capture=new CleanCapture();private List<int[]> badgeMasks=new ArrayList<>();private BattleReader.Result lastResult;
     private final BattlePresence presence=new BattlePresence();
-    private long startedAt,scanStartedAt,scanSerial;private boolean noFrameReported,revealWhenReady;
+    private long startedAt,scanStartedAt,scanSerial;private boolean noFrameReported,revealWhenReady,readerReady,warmingReported;
     private ByteBuffer cachedFrame;private int cachedStride,cachedPixel,cachedWidth,cachedHeight;private boolean cachedDirty;
     private String statusTitle="Olvasás",statusText="Pokémonok és támadások felismerése…";
     private final Runnable poll=new Runnable(){public void run(){if(stopped)return;frame();if(!stopped)main.postDelayed(this,100);}};
@@ -75,8 +75,8 @@ public final class ScanService extends Service {
     }
     private void ocrTimeout(){
         scanSerial++;scanStartedAt=0;gate.failed();gate.invalidate();cancelCapture();clearResult(true);presence.reset();cachedFrame=null;startedAt=SystemClock.elapsedRealtime();noFrameReported=false;
-        reader.close();reader=new BattleReader(dex);
-        message("Felismerési időtúllépés","A szövegfelismerés nem válaszolt 7 másodpercen belül. Új olvasóval újrapróbálás; ha ismétlődik, indítsd újra a figyelést.","?");
+        reader.close();reader=new BattleReader(dex);readerReady=false;warmingReported=false;
+        message("Felismerési időtúllépés","A szövegfelismerés nem válaszolt a megengedett időn belül. Új olvasóval újrapróbálás; ha ismétlődik, indítsd újra a figyelést.","?");
     }
     private void frame(){
         Image image=null;boolean starting=false;
@@ -86,7 +86,13 @@ public final class ScanService extends Service {
             if(!key.equals(profileKey)){profileKey=key;lastProfile=profile.name;gate.invalidate();cancelCapture();cachedFrame=null;startedAt=SystemClock.elapsedRealtime();noFrameReported=false;changing();}
             if(paused||menuOpen)return;
             if(images!=null)image=images.acquireLatestImage();long now=SystemClock.elapsedRealtime();
-            if(gate.isBusy()&&scanStartedAt>0&&now-scanStartedAt>7000){ocrTimeout();return;}
+            // The bundled recognizer may need considerably longer for its first model load.
+            // Recreating it at 7 seconds repeatedly would prevent that load from finishing.
+            if(gate.isBusy()&&scanStartedAt>0){
+                long elapsed=now-scanStartedAt;
+                if(elapsed>(readerReady?7000:30000)){ocrTimeout();return;}
+                if(!readerReady&&!warmingReported&&elapsed>7000){warmingReported=true;message("Felismerő indítása","Az első szövegfelismerés betöltése folyamatban. Legfeljebb 30 másodpercig várok az első válaszra.","…");}
+            }
             int[][] areas=regions(profile,width,height);
             if(image!=null){Image.Plane plane=image.getPlanes()[0];lastTimestamp=image.getTimestamp();noFrameReported=false;gate.observe(SceneFingerprint.rgba(plane.getBuffer(),plane.getRowStride(),plane.getPixelStride(),areas,masks()));retainFrame(image,capture.waiting()||badges.visibleCount(now)>0||controlOverlaps(areas));}
             else if(cachedFrame!=null){gate.observe(SceneFingerprint.rgba(cachedFrame,cachedStride,cachedPixel,areas,masks()));}
@@ -109,7 +115,7 @@ public final class ScanService extends Service {
             final Profile scannedProfile=profile;final String scannedKey=key;final long scannedReload=reloadToken,serial=++scanSerial;final BattleReader scanner=reader;scanStartedAt=now;
             try{scanner.scan(bitmap,profile,new BattleReader.Callback(){
                 public void done(BattleReader.Result result){
-                    if(serial!=scanSerial)return;scanStartedAt=0;boolean current=gate.finish(revision);if(stopped){scanner.close();return;}
+                    if(serial!=scanSerial)return;readerReady=true;warmingReported=false;scanStartedAt=0;boolean current=gate.finish(revision);if(stopped){scanner.close();return;}
                     android.util.Log.d(TAG,"OCR complete; current="+current+", enemy="+(result.enemy!=null)+", positions="+result.positions.size());
                     if(current&&!paused&&!menuOpen&&scannedReload==getSharedPreferences("lens",0).getLong("reload",0)&&scannedKey.equals(Profile.active(ScanService.this).json().toString())){
                         BattlePresence.Mode mode=presence.observe(result.battleVisible,result.enemy,result.own,result.moves);

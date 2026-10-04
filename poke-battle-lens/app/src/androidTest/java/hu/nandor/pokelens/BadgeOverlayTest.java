@@ -73,7 +73,7 @@ public class BadgeOverlayTest {
             // Wait until the service window exists before putting the synthetic game in front.
             assertNotNull("Capture service must start",waitDescription("Hosszan nyomva",10000));
             String fixture="hu.nandor.pokelens.fixture";scenario.onActivity(a->a.startActivity(new Intent().setComponent(new ComponentName(fixture,fixture+".BattleActivity"))));
-            AccessibilityNodeInfo recognized=waitDescription("Charizard",15000);if(recognized==null)fail("Real projection must read the game: "+windowState()+" LOG: "+shell("logcat -d -t 250 -s PokeLens:D AndroidRuntime:E ActivityTaskManager:W"));
+            AccessibilityNodeInfo recognized=waitDescription("Charizard",45000);if(recognized==null)fail("Real projection must read the game: "+windowState()+" LOG: "+shell("logcat -d -t 250 -s PokeLens:D AndroidRuntime:E ActivityTaskManager:W"));
             int stable=0;for(int i=0;i<20;i++){if(waitDescription("Élő. Charizard",300)!=null)stable++;SystemClock.sleep(150);}assertTrue("Static battle must not get stuck waiting for a new frame",stable>=12);
             assertTrue("Real overlay must draw the super-effective badges",waitColoredLabels(automation,false));
             AccessibilityNodeInfo bubble=waitDescription("Charizard",5000);assertNotNull(bubble);assertTrue(bubble.performAction(AccessibilityNodeInfo.ACTION_CLICK));SystemClock.sleep(300);assertNotNull("Showing neutral badges must not pollute OCR",waitDescription("Tackle · 1×",5000));
