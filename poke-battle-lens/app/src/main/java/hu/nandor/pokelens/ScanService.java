@@ -62,7 +62,6 @@ public final class ScanService extends Service {
     private int[][] regions(Profile p,int w,int h){int[][] out=new int[3][];String[] keys={"enemy","own","moves"};for(int i=0;i<3;i++){Rect r=p.crop(keys[i],w,h);out[i]=new int[]{r.left,r.top,r.right,r.bottom};}return out;}
     private int[] controlBounds(){int[] pos=new int[2];controls.getLocationOnScreen(pos);int pad=Ui.dp(this,8);return new int[]{Math.max(0,pos[0]-pad),Math.max(0,pos[1]-pad),Math.min(width,pos[0]+controls.getWidth()+pad),Math.min(height,pos[1]+controls.getHeight()+pad)};}
     private int[][] masks(){List<int[]> out=new ArrayList<>(badgeMasks);if(controls!=null)out.add(controlBounds());return out.toArray(new int[0][]);}
-    private boolean controlOverlaps(int[][] areas){int[] c=controlBounds();for(int[] r:areas)if(c[0]<r[2]&&c[2]>r[0]&&c[1]<r[3]&&c[3]>r[1])return true;return false;}
     private void frame(){
         Image image=null;boolean starting=false;
         try{
@@ -75,7 +74,9 @@ public final class ScanService extends Service {
             if(image!=null){Image.Plane plane=image.getPlanes()[0];lastTimestamp=image.getTimestamp();if(gate.observe(SceneFingerprint.rgba(plane.getBuffer(),plane.getRowStride(),plane.getPixelStride(),areas,masks())))changing();}
             if(capture.timedOut(now)){cancelCapture();gate.refresh();message("Újrapróbálás","Friss képkockára vár. A jelzések még nem érvényesek.","?");return;}
             if(!capture.waiting()&&gate.canBegin(now)){
-                capture.begin(now,lastTimestamp);badges.setVisibility(View.INVISIBLE);if(controlOverlaps(areas))controls.setVisibility(View.INVISIBLE);return;
+                // Hiding the visible button also causes a fresh composed frame on a static
+                // game screen, even when there are no multiplier glyphs to remove yet.
+                capture.begin(now,lastTimestamp);badges.setVisibility(View.INVISIBLE);controls.setVisibility(View.INVISIBLE);return;
             }
             if(image==null||!capture.ready(now,image.getTimestamp()))return;
             final long revision=gate.begin(now);if(revision<0){cancelCapture();return;}

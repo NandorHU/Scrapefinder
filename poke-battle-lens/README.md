@@ -45,7 +45,7 @@ A Dungeons & Pokémon álló profil a mellékelt példa elrendezését közelít
 
 ## Jelzések és folyamatos felismerés
 
-A változásfigyelő kizárja a saját jelzések és a vezérlőgomb területét. OCR előtt röviden elrejti a jelzéseket, megvár legalább 100 ms-ot és egy új képkockát, majd az így kapott tiszta képet olvassa. Emiatt aktív jelzéseknél rövid villanás észlelhető az újraolvasáskor. Nem olvassa vissza a saját szorzóit. A tényleges válaszidő telefonfüggő.
+A változásfigyelő kizárja a saját jelzések és a vezérlőgomb területét. OCR előtt röviden elrejti a jelzéseket és a kis gombot, megvár legalább 100 ms-ot és egy új képkockát, majd az így kapott tiszta képet olvassa. A gomb elrejtése változatlan játékfelületnél is új képkockát eredményez. Emiatt rövid villanás észlelhető az újraolvasáskor. Nem olvassa vissza a saját szorzóit. A tényleges válaszidő telefonfüggő.
 
 A jelzések ablaka nem érinthető és kellően áttetsző az Android 12+ érintésvédelméhez. Biztonsági okból egyes alkalmazások ettől függetlenül is elutasíthatják a fedett érintéseket. A menü és a kis gomb szándékosan kezelhető. Szűk helyen a jelzés kimaradhat, hogy ne takarja a nevet; ilyenkor a kis gomb `?` állapotot mutat, és a részletes menüben olvasható a felismerés.
 

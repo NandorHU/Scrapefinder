@@ -55,6 +55,8 @@ public class BadgeOverlayTest {
         if(positive){AccessibilityNodeInfo button=root;while(button!=null&&!button.isClickable())button=button.getParent();if(button!=null&&button.performAction(AccessibilityNodeInfo.ACTION_CLICK))return true;}
         for(int i=0;i<root.getChildCount();i++)if(clickConsent(root.getChild(i)))return true;return false;
     }
+    private String windowState(){StringBuilder state=new StringBuilder();for(android.view.accessibility.AccessibilityWindowInfo window:InstrumentationRegistry.getInstrumentation().getUiAutomation().getWindows())appendDescriptions(window.getRoot(),state);return state.toString();}
+    private void appendDescriptions(AccessibilityNodeInfo node,StringBuilder state){if(node==null)return;CharSequence description=node.getContentDescription();if(description!=null)state.append("[").append(node.getPackageName()).append(": ").append(description).append("]");for(int i=0;i<node.getChildCount();i++)appendDescriptions(node.getChild(i),state);}
     private String describeConsent(AccessibilityNodeInfo node,int depth){if(node==null||depth>5)return "";StringBuilder s=new StringBuilder();s.append("[").append(node.getViewIdResourceName()).append(" ").append(node.getText()).append(" click=").append(node.isClickable()).append("]");for(int i=0;i<node.getChildCount();i++)s.append(describeConsent(node.getChild(i),depth+1));return s.toString();}
     @Test public void liveProjectionKeepsStableBadgesAndFollowsPokemonSwitch() throws Exception{
         SharedPreferences prefs=app().getSharedPreferences("lens",0);String old=prefs.getString("profiles",null);int oldIndex=prefs.getInt("active",0);long oldReload=prefs.getLong("reload",0);
@@ -67,11 +69,11 @@ public class BadgeOverlayTest {
             // Wait until the service window exists before putting the synthetic game in front.
             assertNotNull("Capture service must start",waitDescription("Hosszan nyomva",10000));
             String fixture="hu.nandor.pokelens.fixture";app().startActivity(new Intent().setComponent(new ComponentName(fixture,fixture+".BattleActivity")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            assertNotNull("Real projection must read the game",waitDescription("Charizard",15000));
+            AccessibilityNodeInfo recognized=waitDescription("Charizard",15000);assertNotNull("Real projection must read the game: "+windowState(),recognized);
             int stable=0;for(int i=0;i<20;i++){if(waitDescription("Charizard",300)!=null)stable++;SystemClock.sleep(150);}assertTrue("Own overlays must not create a recognition loop",stable>=12);
             AccessibilityNodeInfo bubble=waitDescription("Charizard",5000);assertNotNull(bubble);assertTrue(bubble.performAction(AccessibilityNodeInfo.ACTION_CLICK));SystemClock.sleep(300);assertNotNull("Showing neutral badges must not pollute OCR",waitDescription("Tackle · 1×",5000));
             android.util.DisplayMetrics metrics=app().getResources().getDisplayMetrics();float x=metrics.widthPixels*.2f,y=metrics.heightPixels*.7f;long down=SystemClock.uptimeMillis();MotionEvent press=MotionEvent.obtain(down,down,MotionEvent.ACTION_DOWN,x,y,0),release=MotionEvent.obtain(down,down+50,MotionEvent.ACTION_UP,x,y,0);press.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);release.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);automation.injectInputEvent(press,true);automation.injectInputEvent(release,true);press.recycle();release.recycle();
-            assertNotNull("Changed enemy and moves must replace old annotations",waitDescription("Swampert",15000));assertNotNull(waitDescription("Energy Ball · 4×",5000));assertNotNull(waitDescription("Thunderbolt · 0×",5000));
+            AccessibilityNodeInfo changed=waitDescription("Swampert",15000);assertNotNull("Changed enemy and moves must replace old annotations: "+windowState(),changed);assertNotNull(waitDescription("Energy Ball · 4×",5000));assertNotNull(waitDescription("Thunderbolt · 0×",5000));
         }finally{app().stopService(new Intent(app(),ScanService.class));shell("am force-stop hu.nandor.pokelens.fixture");shell("appops set "+app().getPackageName()+" SYSTEM_ALERT_WINDOW default");automation.setServiceInfo(original);SharedPreferences.Editor edit=prefs.edit().putInt("active",oldIndex).putLong("reload",oldReload);if(old==null)edit.remove("profiles");else edit.putString("profiles",old);edit.commit();}
     }
     @Test public void translucentAnnotationLetsTapReachAnotherAppUid() throws Exception{
