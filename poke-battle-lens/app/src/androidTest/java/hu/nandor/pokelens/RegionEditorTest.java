@@ -44,8 +44,9 @@ public class RegionEditorTest {
             multi(v,down,down+10,MotionEvent.ACTION_POINTER_DOWN|(1<<MotionEvent.ACTION_POINTER_INDEX_SHIFT),300,700,500,900);
             multi(v,down,down+30,MotionEvent.ACTION_MOVE,250,650,550,950);
             multi(v,down,down+60,MotionEvent.ACTION_MOVE,200,600,600,1000);
-            multi(v,down,down+80,MotionEvent.ACTION_POINTER_UP|(1<<MotionEvent.ACTION_POINTER_INDEX_SHIFT),200,600,600,1000);
-            event(v,MotionEvent.ACTION_UP,200,600);assertArrayEquals(before,p.enemy,0);assertFalse(v.canUndo());assertTrue(v.zoomLevel()>1);
+            multi(v,down,down+80,MotionEvent.ACTION_MOVE,100,500,700,1100);
+            multi(v,down,down+100,MotionEvent.ACTION_POINTER_UP|(1<<MotionEvent.ACTION_POINTER_INDEX_SHIFT),100,500,700,1100);
+            MotionEvent up=MotionEvent.obtain(down,down+120,MotionEvent.ACTION_UP,100,500,0);v.onTouchEvent(up);up.recycle();assertArrayEquals(before,p.enemy,0);assertFalse(v.canUndo());assertTrue("Continued pinch should zoom the image: "+v.zoomLevel(),v.zoomLevel()>1);
         });
     }
     private static void multi(RegionEditor v,long down,long when,int action,float x1,float y1,float x2,float y2){
