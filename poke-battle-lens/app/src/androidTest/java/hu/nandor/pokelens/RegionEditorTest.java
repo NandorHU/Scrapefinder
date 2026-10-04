@@ -4,6 +4,7 @@ import android.content.*;
 import android.graphics.*;
 import android.net.Uri;
 import android.os.SystemClock;
+import android.os.ParcelFileDescriptor;
 import android.view.*;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -63,6 +64,9 @@ public class RegionEditorTest {
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             scenario.onActivity(activity->{View decor=activity.getWindow().getDecorView();RegionEditor editor=decor.findViewWithTag("region-editor");assertNotNull(editor);assertTrue("Image should use over half the window",editor.getHeight()>decor.getHeight()*.55f);assertTrue("Image should use nearly full width",editor.getWidth()>decor.getWidth()*.90f);
                 Bitmap screen=Bitmap.createBitmap(decor.getWidth(),decor.getHeight(),Bitmap.Config.ARGB_8888);decor.draw(new Canvas(screen));File output=new File(app.getExternalFilesDir(null),"editor-preview.png");try(FileOutputStream out=new FileOutputStream(output)){screen.compress(Bitmap.CompressFormat.PNG,100,out);}catch(IOException e){throw new RuntimeException(e);}finally{screen.recycle();}
+                // AGP removes app data after connected tests; keep the synthetic preview outside it.
+                try(InputStream done=new ParcelFileDescriptor.AutoCloseInputStream(InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("cp "+output.getAbsolutePath()+" /data/local/tmp/editor-preview.png"))){while(done.read()!=-1){}}
+                catch(IOException e){throw new RuntimeException(e);}
             });
         }finally{input.delete();}
     }
