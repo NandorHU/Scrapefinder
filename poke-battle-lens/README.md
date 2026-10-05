@@ -10,7 +10,7 @@ Magyar nyelvű, helyben működő Pokémon csatasegéd. Android 8.0+.
 - Beépített, offline ML Kit OCR (angol Pokémon- és támadásnevek).
 - 1351 Pokémon-forma, 919 támadás, két típus együttes szorzója.
 - A játék támadásnevei mellett apró típusszorzók jelennek meg. Az OCR a nevek pozícióját is felismeri; nincs szükség négy külön jelzéshely kézi beállítására. A jelzések nem fedik a felismert neveket és átengedik az érintést.
-- Alapból csak az 1×-től eltérő értékek látszanak; bizonytalan felismerésnél `?`. A 44 dp méretű, húzható gombra koppintva minden szorzó és az állapottámadások `áll.` jelzése 5 másodpercre előhívható.
+- Minden felismert támadás mellett látszik az alap-pontosság százaléka. Az 1×-től eltérő típusszorzó a százalék fölött, két rövid sorban szerepel; bizonytalan felismerésnél `?`. Az 1× és az állapottámadás szövege alapból rejtve marad. A 44 dp méretű, húzható gombra koppintva minden szorzó és az állapottámadások `áll.` jelzése 5 másodpercre előhívható.
 - Útválasztás és más képernyő esetén a jelzések eltűnnek; a kis gomb `○`, a menü **Várakozás csatára** állapotot mutat. Csata és látható támadásmenü felismerésekor automatikusan folytatja. A kézi javítások nem kényszerítik csatává az útválasztót. Téves OCR vagy rossz profil szintén várakozást okozhat; ez nem teljes játékállapot-ismeret.
 - Hosszan nyomva megnyílik a vezérlőmenü: mentett profilválasztó, Force load, szünet, beállítások és leállítás. A figyelés a nyitott menüben szünetel.
 - **Force load** a hosszan nyomással megnyitható menüben: újratölti az aktív mentett profilt, eldobja a korábbi képkockát és OCR-eredményt, majd új olvasást indít. Szünetből is folytatja a figyelést.
@@ -36,6 +36,7 @@ A Dungeons & Pokémon álló profil a mellékelt példa elrendezését közelít
 ## Az eredmények jelentése és határai
 
 - A szorzó (0×, ¼×, ½×, 1×, 2×, 4×) a **típus szerinti** hatékonyság.
+- A százalék a kiválasztott generáció szerinti **alap-pontosság**, nem a csata közben módosított találati esély. Pontosság/kitérés-fokozatok, képességek, tárgyak és speciális támadásszabályok módosíthatják. A `—` azt jelenti, hogy az adatbázisban nincs megadott alap-pontosság; ezt nem alakítjuk 0% vagy 100% értékké.
 - A játékban a sebző támadások neve mellett a típusszorzó szerepel. A semleges 1× és az állapottámadások alapból rejtve maradnak; előhíváskor az állapottámadásoknál **áll.** látható, mert nincs sebzésük. A részletes képtesztben továbbra is látszik az erő, pontosság és STAB.
 - Az erőmutató: `power × type effectiveness × STAB`. **Nem pontos sebzés és nem legjobb-támadás ajánlás.** Fizikai/speciális kategória, pontosság és alaperő külön látszik.
 - Attack/Sp. Attack, Defense/Sp. Defense, ability (például Levitate), item, weather, terrain, stat changes, Terastallization, dynamax, és egyedi ROM-hack szabályok nincsenek figyelembe véve. Az állapottámadások és ismeretlen/változó alaperő nem kapnak sebzésbecslést.
@@ -60,7 +61,7 @@ Képkockák csak RAM-ban, helyben kerülnek feldolgozásra; nem mentjük vagy k�
 
 JDK 17, Android SDK 35, Gradle 8.9. `./gradlew testDebugUnitTest lintDebug assembleDebug`.
 
-A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.3.2.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
+A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.3.3.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
 
 ## Forrásadatok
 

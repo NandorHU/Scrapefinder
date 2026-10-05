@@ -12,6 +12,7 @@ public final class BattleSummary {
             Dex.Move m=dex.move(name,profile.generation);if(m==null)continue;
             s.append("\n").append(Dex.display(name)).append(" · ");
             s.append(m.category==1?"állapot":multiplier(BattleMath.effectiveness(m.type,enemy,profile.generation,dex.chart))+"×");
+            s.append(" · ").append(BadgeValue.accuracy(m));
         }
         return s.toString();
     }
@@ -25,12 +26,12 @@ public final class BattleSummary {
             Dex.Move m=dex.move(name,profile.generation);if(m==null)continue;
             double eff=m.category==1?1:BattleMath.effectiveness(m.type,enemy,profile.generation,dex.chart),stab=BattleMath.stab(m.type,own);
             s.append("\n").append(Dex.display(name)).append("   ").append(m.category==1?"—":multiplier(eff)+"×").append("\n");
-            if(m.category==1){s.append("Állapottámadás · nincs sebzés");continue;}
+            if(m.category==1){s.append("Állapottámadás · nincs sebzés · alap-pontosság ").append(BadgeValue.accuracy(m));continue;}
             s.append(Dex.display(dex.typeNames.get(m.type))).append(m.category==2?" · fizikai":" · speciális");
             if(m.power>0){s.append(" · erő ").append(m.power);if(own.length>0)s.append(" · STAB ").append(multiplier(stab)).append("×");
                 s.append("\nErő × típus × STAB: ").append(own.length>0?String.format(Locale.ROOT,"%.0f",BattleMath.comparison(m.power,eff,stab)):"? (saját Pokémon hiányzik)");
             }else s.append(" · változó / különleges sebzés");
-            s.append(" · pontosság ").append(m.accuracy==0?"—":m.accuracy+"%");
+            s.append(" · alap-pontosság ").append(BadgeValue.accuracy(m));
         }
         s.append("\n\nTípusszorzó és erőmutató; nem pontos sebzés. Képesség, tárgy, stat és terep nincs beleszámítva.");return s.toString();
     }

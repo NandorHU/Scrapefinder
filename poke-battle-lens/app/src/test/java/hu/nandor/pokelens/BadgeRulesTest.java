@@ -15,6 +15,23 @@ public class BadgeRulesTest {
         assertTrue(BadgeValue.of(d,"tackle",null,9).unknown);assertEquals("?",BadgeValue.of(d,null,"charizard",9).label);
     }
     @Test public void revealExpiresAfterFiveSecondsAndRepeatedTapExtendsIt(){RevealWindow r=new RevealWindow();assertFalse(r.showing(0));r.reveal(100);assertTrue(r.showing(5099));assertFalse(r.showing(5100));r.reveal(5000);assertTrue(r.showing(9999));r.reset();assertFalse(r.showing(5000));}
+    @Test public void starmieMovesKeepBaseAccuracyEvenWhenNeutralMultiplierIsCollapsed() throws Exception{
+        Dex d=dex();
+        BadgeValue rock=BadgeValue.of(d,"rock-slide","starmie",9);
+        assertEquals("90%",rock.text(false));assertEquals("1×\n90%",rock.text(true));
+        assertEquals("85%",BadgeValue.of(d,"mud-bomb","starmie",9).text(false));
+        assertEquals("0,5×\n85%",BadgeValue.of(d,"muddy-water","starmie",9).text(false));
+        assertEquals("0,5×\n100%",BadgeValue.of(d,"rock-smash","starmie",9).text(false));
+    }
+    @Test public void accuracyUsesGenerationAndDoesNotInventPercentagesForMissingData() throws Exception{
+        Dex d=dex();
+        assertEquals("100%",BadgeValue.of(d,"thunder-wave","starmie",6).text(false));
+        assertEquals("áll.\n90%",BadgeValue.of(d,"thunder-wave","starmie",9).text(true));
+        assertEquals("95%",BadgeValue.of(d,"tackle","starmie",4).accuracy);
+        assertEquals("—",BadgeValue.of(d,"swift","starmie",9).text(false));
+        assertEquals("?",BadgeValue.of(d,null,"starmie",9).text(false));
+        assertEquals("?\n90%",BadgeValue.of(d,"rock-slide",null,9).text(false));
+    }
     @Test public void contactSheetBoxesMapBackToOriginalCoordinates(){
         MovePosition p=MovePosition.map("tackle",84,560,204,600,30,700,600,100,24,500,1200,200,1000,1600);
         assertEquals(.06f,p.left,.00001f);assertEquals(.45625f,p.top,.00001f);assertEquals(.12f,p.right,.00001f);assertEquals(.46875f,p.bottom,.00001f);

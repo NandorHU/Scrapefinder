@@ -10,8 +10,8 @@ public class CompactSummaryTest {
         BattleReader.Result r=new BattleReader.Result();r.enemy="charizard";r.own="squirtle";
         r.moves=Arrays.asList("rock-slide","water-gun","tackle","tail-whip");
         String text=BattleSummary.compact(dex(),r,new Profile("test"));
-        assertTrue(text.contains("Rock Slide · 4×"));assertTrue(text.contains("Water Gun · 2×"));
-        assertTrue(text.contains("Tackle · 1×"));assertTrue(text.contains("Tail Whip · állapot"));assertEquals(5,text.split("\n").length);
+        assertTrue(text.contains("Rock Slide · 4× · 90%"));assertTrue(text.contains("Water Gun · 2×"));
+        assertTrue(text.contains("Tackle · 1×"));assertTrue(text.contains("Tail Whip · állapot · 100%"));assertEquals(5,text.split("\n").length);
     }
     @Test public void immunityResistanceAndMissingNamesAreClear() throws Exception{
         Dex d=dex();BattleReader.Result r=new BattleReader.Result();r.enemy="toucannon";

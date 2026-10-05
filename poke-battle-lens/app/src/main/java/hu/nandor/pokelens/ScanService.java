@@ -133,7 +133,7 @@ public final class ScanService extends Service {
                         if(revealWhenReady){badges.revealAll();revealWhenReady=false;}
                         gate.rebase(SceneFingerprint.rgba(clean,stride,pixel,regions(scannedProfile,w,h),masks()));
                         boolean uncertain=result.enemy==null||result.positions.isEmpty()||badges.unplaced;for(MovePosition p:result.positions)if(p.name==null)uncertain=true;
-                        String summary=BattleSummary.compact(dex,result,scannedProfile);if(!uncertain&&badges.visibleCount(SystemClock.elapsedRealtime())==0)summary+="\nAlapnézetben nincs eltérő típusszorzó. Koppintásra az 1× és az állapottámadások is megjelennek.";
+                        String summary=BattleSummary.compact(dex,result,scannedProfile);if(!uncertain&&!badges.hasExceptional())summary+="\nAlapnézetben nincs eltérő típusszorzó. Koppintásra az 1× és az állapottámadások is megjelennek.";
                         message(uncertain?"Ellenőrizd a felismerést":"Élő",summary,uncertain?"?":"◎");
                     }
                 }
@@ -147,7 +147,7 @@ public final class ScanService extends Service {
     private void openMenu(){
         if(stopped||menuOpen)return;menuOpen=true;gate.invalidate();cancelCapture();badges.clear(false);
         List<Profile> saved=Profile.load(this);int active=Math.max(0,Math.min(saved.size()-1,getSharedPreferences("lens",0).getInt("active",0)));controls.expand(saved,active);
-        controls.menu.status.setText(statusTitle+" · "+lastProfile);controls.menu.body.setText(statusText+"\n\náll. = állapottámadás • ? = bizonytalan\nA figyelés a menüben szünetel.");
+        controls.menu.status.setText(statusTitle+" · "+lastProfile);controls.menu.body.setText(statusText+"\n\náll. = állapottámadás • ? = bizonytalan\n% = alap-pontosság, nem a módosított találati esély.\n— = nincs megadott alap-pontosság.\nA figyelés a menüben szünetel.");
     }
     private void closeMenu(){menuOpen=false;controls.collapse();gate.invalidate();cancelCapture();changing();if(paused)message("Szünet","A figyelés folytatható a menüben.","Ⅱ");}
     private void pause(){paused=!paused;controls.menu.pause.setText(paused?"▶":"Ⅱ");gate.invalidate();cancelCapture();clearResult(true);presence.reset();revealWhenReady=false;if(menuOpen){menuOpen=false;controls.collapse();}message(paused?"Szünet":"Olvasás",paused?"A figyelés folytatható a menüben.":"Friss képernyő olvasása…",paused?"Ⅱ":"…");}
