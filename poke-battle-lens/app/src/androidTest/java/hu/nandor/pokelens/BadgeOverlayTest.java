@@ -15,6 +15,9 @@ import java.util.*;
 
 public class BadgeOverlayTest {
     private Context app(){return InstrumentationRegistry.getInstrumentation().getTargetContext();}
+    // One old in-flight OCR plus two confirmation reads can each take up to 30s.
+    // This is a correctness wait on the CI emulator, not a latency benchmark.
+    private static final long SCENE_TIMEOUT_MS=95000;
     private static final String[] IDS={"rock-slide","water-gun","tackle","tail-whip"},LABELS={"Rock Slide","Water Gun","Tackle","Tail Whip"};
     private static final class BattleScene extends View {
         final Paint ink=new Paint(Paint.ANTI_ALIAS_FLAG);BattleScene(Context c){super(c);}
@@ -73,15 +76,15 @@ public class BadgeOverlayTest {
             // Wait until the service window exists before putting the synthetic game in front.
             assertNotNull("Capture service must start",waitDescription("Hosszan nyomva",10000));
             String fixture="hu.nandor.pokelens.fixture";scenario.onActivity(a->a.startActivity(new Intent().setComponent(new ComponentName(fixture,fixture+".BattleActivity"))));
-            AccessibilityNodeInfo recognized=waitDescription("Charizard",45000);if(recognized==null)fail("Real projection must read the game: "+windowState()+" LOG: "+shell("logcat -d -t 250 -s PokeLens:D AndroidRuntime:E ActivityTaskManager:W"));
+            AccessibilityNodeInfo recognized=waitDescription("Charizard",SCENE_TIMEOUT_MS);if(recognized==null)fail("Real projection must read the game: "+windowState()+" LOG: "+shell("logcat -d -t 250 -s PokeLens:D AndroidRuntime:E ActivityTaskManager:W"));
             int stable=0;for(int i=0;i<20;i++){if(waitDescription("Élő. Charizard",300)!=null)stable++;SystemClock.sleep(150);}assertTrue("Static battle must not get stuck waiting for a new frame",stable>=12);
             assertTrue("Real overlay must draw the super-effective badges",waitColoredLabels(automation,false));
             AccessibilityNodeInfo bubble=waitDescription("Charizard",5000);assertNotNull(bubble);assertTrue(bubble.performAction(AccessibilityNodeInfo.ACTION_CLICK));SystemClock.sleep(300);assertNotNull("Showing neutral badges must not pollute OCR",waitDescription("Tackle · 1×",5000));
             tapGame(automation);
-            AccessibilityNodeInfo changed=waitDescription("Swampert",45000);assertNotNull("Changed enemy and moves must replace old annotations: "+windowState(),changed);assertNotNull(waitDescription("Energy Ball · 4× · 100% ★",5000));assertNotNull(waitDescription("Thunderbolt · 0× · 100%",5000));
+            AccessibilityNodeInfo changed=waitDescription("Swampert",SCENE_TIMEOUT_MS);assertNotNull("Changed enemy and moves must replace old annotations: "+windowState(),changed);assertNotNull(waitDescription("Energy Ball · 4× · 100% ★",5000));assertNotNull(waitDescription("Thunderbolt · 0× · 100%",5000));
             stable=0;for(int i=0;i<20;i++){if(waitDescription("Élő. Swampert",300)!=null)stable++;SystemClock.sleep(150);}assertTrue("Animated backgrounds must not starve recognition",stable>=12);assertTrue(waitColoredLabels(automation,false));saveCapture(automation,"animated-battle-preview.png");
-            tapGame(automation);assertNotNull("Route screen must enter waiting mode",waitDescription("Várakozás csatára",45000));SystemClock.sleep(200);assertEquals("Route must have no remaining damage labels",0,coloredLabels(automation,false));assertEquals("Route must have no remaining neutral/status labels",0,coloredLabels(automation,true));saveCapture(automation,"route-waiting-preview.png");
-            tapGame(automation);assertNotNull("Returning to battle must automatically resume",waitDescription("Élő. Ditto",45000));assertNotNull(waitDescription("Nuzzle · 1×",5000));assertNotNull(waitDescription("Alapnézetben nincs eltérő",5000));
+            tapGame(automation);assertNotNull("Route screen must enter waiting mode",waitDescription("Várakozás csatára",SCENE_TIMEOUT_MS));SystemClock.sleep(200);assertEquals("Route must have no remaining damage labels",0,coloredLabels(automation,false));assertEquals("Route must have no remaining neutral/status labels",0,coloredLabels(automation,true));saveCapture(automation,"route-waiting-preview.png");
+            tapGame(automation);assertNotNull("Returning to battle must automatically resume",waitDescription("Élő. Ditto",SCENE_TIMEOUT_MS));assertNotNull(waitDescription("Nuzzle · 1×",5000));assertNotNull(waitDescription("Alapnézetben nincs eltérő",5000));
             AccessibilityNodeInfo ditto=waitDescription("Élő. Ditto",5000);assertNotNull(ditto);assertTrue(ditto.performAction(AccessibilityNodeInfo.ACTION_CLICK));assertTrue("Tap must actually reveal neutral and status badges",waitColoredLabels(automation,true));saveCapture(automation,"ditto-reveal-preview.png");
         }finally{app().stopService(new Intent(app(),ScanService.class));shell("am force-stop hu.nandor.pokelens.fixture");shell("appops set "+app().getPackageName()+" SYSTEM_ALERT_WINDOW default");automation.setServiceInfo(original);SharedPreferences.Editor edit=prefs.edit().putInt("active",oldIndex).putLong("reload",oldReload);if(old==null)edit.remove("profiles");else edit.putString("profiles",old);edit.commit();}
     }
