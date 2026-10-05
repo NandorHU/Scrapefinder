@@ -7,11 +7,20 @@ import java.util.*;
 public final class Dex {
     public final Map<String, JSONObject> pokemon = new LinkedHashMap<>(), moves = new LinkedHashMap<>();
     private final Map<String,String> aliases=new LinkedHashMap<>();
+    private final Map<String,JSONObject> rankingStats=new HashMap<>();
+    private final Set<String> regularMoves=new HashSet<>(),neverMiss=new HashSet<>();
     public final Map<Integer,String> typeNames = new HashMap<>();
     private final Set<String> names;
     private final NameMatcher.Index pokemonIndex,moveIndex;
     public final int[][] chart = new int[18][18];
-    public Dex(Context context) throws Exception { this(read(context)); }
+    public Dex(Context context) throws Exception { this(read(context,"dex.json"),read(context,"ranking.json")); }
+    public Dex(String json,String rankingJson) throws Exception {
+        this(json);JSONObject ranking=new JSONObject(rankingJson),stats=ranking.getJSONObject("pokemon");
+        Iterator<String> keys=stats.keys();while(keys.hasNext()){String name=keys.next();rankingStats.put(name,stats.getJSONObject(name));}
+        JSONArray safe=ranking.getJSONArray("safe_moves"),certain=ranking.getJSONArray("never_miss");
+        for(int i=0;i<safe.length();i++)regularMoves.add(safe.getString(i));
+        for(int i=0;i<certain.length();i++)neverMiss.add(certain.getString(i));
+    }
     public Dex(String json) throws Exception {
         JSONObject data = new JSONObject(json), types=data.getJSONObject("types");
         Iterator<String> keys=types.keys(); while(keys.hasNext()){String k=keys.next();typeNames.put(Integer.parseInt(k),types.getString(k));}
@@ -23,8 +32,24 @@ public final class Dex {
         Set<String> all=new LinkedHashSet<>(pokemon.keySet());all.addAll(aliases.keySet());names=Collections.unmodifiableSet(all);
         pokemonIndex=new NameMatcher.Index(names);moveIndex=new NameMatcher.Index(moves.keySet());
     }
-    private static String read(Context c) throws IOException {
-        try(InputStream in=c.getAssets().open("dex.json")){ ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int count;while((count=in.read(buffer))!=-1)out.write(buffer,0,count);return out.toString("UTF-8"); }
+    private static String read(Context c,String file) throws IOException {
+        try(InputStream in=c.getAssets().open(file)){ ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int count;while((count=in.read(buffer))!=-1)out.write(buffer,0,count);return out.toString("UTF-8"); }
+    }
+    boolean regularDamage(String name){return regularMoves.contains(name);}
+    boolean neverMisses(String name){return neverMiss.contains(name);}
+    int baseStat(String name,int stat,int generation){
+        if(stat<1||stat>6)return 0;
+        JSONObject row=rankingStats.get(aliases.getOrDefault(name,name));if(row==null)return 0;
+        JSONArray stats=row.optJSONArray("stats");if(stats==null)return 0;
+        int value=stats.optInt(stat-1);JSONObject past=row.optJSONObject("past");
+        if(past==null)return value;
+        int best=100;Iterator<String> keys=past.keys();
+        while(keys.hasNext()){
+            String key=keys.next();int g=Integer.parseInt(key);JSONObject old=past.optJSONObject(key);
+            String id=g==1&&(stat==4||stat==5)?"9":String.valueOf(stat);
+            if(g>=generation&&g<best&&old!=null&&old.has(id)){value=old.optInt(id);best=g;}
+        }
+        return value;
     }
     public Set<String> pokemonNames(){return names;}
     public String matchPokemon(String text){String n=pokemonIndex.match(text);return n==null?null:aliases.getOrDefault(n,n);}

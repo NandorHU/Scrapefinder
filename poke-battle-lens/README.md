@@ -9,7 +9,7 @@ Magyar nyelvű, helyben működő Pokémon csatasegéd. Android 8.0+.
 - A háttér animációja új olvasást kér, de nem törli és nem érvényteleníti folyamatosan az OCR-válaszokat. Új Pokémon- vagy támadáslista felismerésekor törli az előző jelzéseket, majd két egyező név/támadás olvasás után jeleníti meg az újakat. Profilváltás, Force load, szünet és méretváltás továbbra is érvényteleníti a korábbi kérést.
 - Beépített, offline ML Kit OCR (angol Pokémon- és támadásnevek).
 - 1351 Pokémon-forma, 919 támadás, két típus együttes szorzója.
-- A játék támadásnevei mellett apró típusszorzók jelennek meg. Az OCR a nevek pozícióját is felismeri; nincs szükség négy külön jelzéshely kézi beállítására. A jelzések nem fedik a felismert neveket és átengedik az érintést.
+- A játék támadásnevei mellett apró típusszorzók jelennek meg. A ★ a bázisadatokból becsült legerősebb sebző támadásokat jelöli; a legmagasabb mutató 90%-át elérő támadások közösen kapnak csillagot. Az OCR a nevek pozícióját is felismeri; nincs szükség négy külön jelzéshely kézi beállítására. A jelzések nem fedik a felismert neveket és átengedik az érintést.
 - Minden felismert támadás mellett látszik az alap-pontosság százaléka. Az 1×-től eltérő típusszorzó a százalék fölött, két rövid sorban szerepel; bizonytalan felismerésnél `?`. Az 1× és az állapottámadás szövege alapból rejtve marad. A 44 dp méretű, húzható gombra koppintva minden szorzó és az állapottámadások `áll.` jelzése 5 másodpercre előhívható.
 - Útválasztás és más képernyő esetén a jelzések eltűnnek; a kis gomb `○`, a menü **Várakozás csatára** állapotot mutat. Csata és látható támadásmenü felismerésekor automatikusan folytatja. A kézi javítások nem kényszerítik csatává az útválasztót. Téves OCR vagy rossz profil szintén várakozást okozhat; ez nem teljes játékállapot-ismeret.
 - Hosszan nyomva megnyílik a vezérlőmenü: mentett profilválasztó, Force load, szünet, beállítások és leállítás. A figyelés a nyitott menüben szünetel.
@@ -38,6 +38,8 @@ A Dungeons & Pokémon álló profil a mellékelt példa elrendezését közelít
 - A szorzó (0×, ¼×, ½×, 1×, 2×, 4×) a **típus szerinti** hatékonyság.
 - A százalék a kiválasztott generáció szerinti **alap-pontosság**, nem a csata közben módosított találati esély. Pontosság/kitérés-fokozatok, képességek, tárgyak és speciális támadásszabályok módosíthatják. A `—` azt jelenti, hogy az adatbázisban nincs megadott alap-pontosság; ezt nem alakítjuk 0% vagy 100% értékké.
 - A játékban a sebző támadások neve mellett a típusszorzó szerepel. A semleges 1× és az állapottámadások alapból rejtve maradnak; előhíváskor az állapottámadásoknál **áll.** látható, mert nincs sebzésük. A részletes képtesztben továbbra is látszik az erő, pontosság és STAB.
+- A csillaghoz használt összehasonlító mutató: `power × típusszorzó × STAB × bázis Attack/Defense (vagy Sp. Attack/Sp. Defense) × alap-pontosság`. Fajadatokra épülő becslés; szint, tényleges stat, IV/EV, nature és csata közbeni állapot nincs beolvasva. Az állapottámadásokat nem rangsorolja, a prioritást és a taktikai előnyöket nem értékeli. A csillaggal jelölt semleges 1× alapból is látszik.
+- Csak ellenőrzött, egyszerű, egykörös sebző támadásokat rangsorol. Ha egy felismert sebző támadás feltételes, változó/fix sebzésű, több találatos, töltést/visszatöltést igényel, más statot használ vagy nincs hozzá biztonságos szabály, az egész támadáslistán elmarad a csillagjelzés. Hiányzó név/bázisadat esetén szintén nincs csillag. A menü kiírja az okot.
 - Az erőmutató: `power × type effectiveness × STAB`. **Nem pontos sebzés és nem legjobb-támadás ajánlás.** Fizikai/speciális kategória, pontosság és alaperő külön látszik.
 - Attack/Sp. Attack, Defense/Sp. Defense, ability (például Levitate), item, weather, terrain, stat changes, Terastallization, dynamax, és egyedi ROM-hack szabályok nincsenek figyelembe véve. Az állapottámadások és ismeretlen/változó alaperő nem kapnak sebzésbecslést.
 - Az adatbázis egyes fix/változó sebzésű támadásokat számszerű erővel jelölhet: az erőmutató ezeknél nem alkalmazható. Nincs automatikus támadás-rangsor.
@@ -61,11 +63,11 @@ Képkockák csak RAM-ban, helyben kerülnek feldolgozásra; nem mentjük vagy k�
 
 JDK 17, Android SDK 35, Gradle 8.9. `./gradlew testDebugUnitTest lintDebug assembleDebug`.
 
-A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.3.3.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
+A GitHub Actions elkészíti a tesztelt, debug-kulccsal aláírt `poke-battle-lens-0.3.4.apk` fájlt. Az artifact az adott Actions-futásnál tölthető le. A debug APK telepíthető tesztverzió; nem Play Store-kiadás. Frissítésekhez tartsd meg ugyanazt az aláírókulcsot. A release-aláírókulcsot **soha ne commitold**.
 
 ## Forrásadatok
 
-[PokeAPI CSV](https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv), BSD-3-Clause (lásd THIRD_PARTY_NOTICES.md). Adatfrissítés: `python3 tools/build_data.py`. A generátor hálózatot igényel; az app nem.
+[PokeAPI CSV](https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv), BSD-3-Clause (lásd THIRD_PARTY_NOTICES.md). Adatfrissítés: `python3 tools/build_data.py` és `python3 tools/build_ranking_data.py`. A generátor hálózatot igényel; az app nem.
 
 A Pokémon nevek és kapcsolódó védjegyek a megfelelő jogosultak tulajdonát képezik. Független rajongói segédapp.
 

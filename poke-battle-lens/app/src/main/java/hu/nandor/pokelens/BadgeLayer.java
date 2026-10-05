@@ -20,8 +20,10 @@ final class BadgeLayer extends View {
     List<int[]> prepare(Dex dex,BattleReader.Result result,Profile profile,int width,int height){
         badges.clear();unplaced=false;List<int[]> masks=new ArrayList<>();List<BadgePlacement.Box> occupied=new ArrayList<>();
         Paint.FontMetrics font=ink.getFontMetrics(),small=accuracyInk.getFontMetrics();float h=font.descent-font.ascent+small.descent-small.ascent+Ui.dp(getContext(),7),gap=Ui.dp(getContext(),4);
+        MoveRecommendation.Result recommendation=MoveRecommendation.forBattle(dex,result,profile.generation);
         for(MovePosition move:result.positions){
-            BadgeValue value=BadgeValue.of(dex,move.name,result.enemy,profile.generation);float w=Math.max(Ui.dp(getContext(),28),Math.max(ink.measureText(value.label),accuracyInk.measureText(value.accuracy))+Ui.dp(getContext(),10));
+            BadgeValue value=BadgeValue.of(dex,move.name,result.enemy,profile.generation);if(recommendation.best.contains(move.name))value=value.withRecommendation();
+            float w=Math.max(Ui.dp(getContext(),28),Math.max(ink.measureText(value.label),accuracyInk.measureText(value.accuracy))+Ui.dp(getContext(),10));
             BadgePlacement.Box box=BadgePlacement.place(move,w,h,width,height,gap,result.positions,occupied);if(box==null){unplaced=true;continue;}
             occupied.add(box);badges.add(new Badge(box,value));int pad=Ui.dp(getContext(),2);
             masks.add(new int[]{Math.max(0,(int)Math.floor(box.left)-pad),Math.max(0,(int)Math.floor(box.top)-pad),Math.min(width,(int)Math.ceil(box.right)+pad),Math.min(height,(int)Math.ceil(box.bottom)+pad)});

@@ -133,7 +133,7 @@ public final class ScanService extends Service {
                         if(revealWhenReady){badges.revealAll();revealWhenReady=false;}
                         gate.rebase(SceneFingerprint.rgba(clean,stride,pixel,regions(scannedProfile,w,h),masks()));
                         boolean uncertain=result.enemy==null||result.positions.isEmpty()||badges.unplaced;for(MovePosition p:result.positions)if(p.name==null)uncertain=true;
-                        String summary=BattleSummary.compact(dex,result,scannedProfile);if(!uncertain&&!badges.hasExceptional())summary+="\nAlapnézetben nincs eltérő típusszorzó. Koppintásra az 1× és az állapottámadások is megjelennek.";
+                        String summary=BattleSummary.compact(dex,result,scannedProfile)+"\n"+MoveRecommendation.explanation(MoveRecommendation.forBattle(dex,result,scannedProfile.generation));if(!uncertain&&!badges.hasExceptional())summary+="\nAlapnézetben nincs eltérő típusszorzó. A csillaggal jelölt 1× alapból is látszik. Koppintásra a többi 1× és az állapottámadások is megjelennek.";
                         message(uncertain?"Ellenőrizd a felismerést":"Élő",summary,uncertain?"?":"◎");
                     }
                 }
