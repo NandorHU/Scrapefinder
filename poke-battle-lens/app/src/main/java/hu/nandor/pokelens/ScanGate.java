@@ -1,0 +1,42 @@
+package hu.nandor.pokelens;
+
+/** Pixel changes queue another read; only explicit invalidation rejects an in-flight read. */
+public final class ScanGate {
+    public static final long MIN_SCAN_INTERVAL_MS = 300;
+    public static final long FALLBACK_REFRESH_MS = 2000;
+    private long revision, fingerprint, frameVersion, requestFrame, completedFrame = -1, lastStart = -FALLBACK_REFRESH_MS;
+    private boolean hasFrame, busy;
+
+    public boolean observe(long nextFingerprint) {
+        if (hasFrame && fingerprint == nextFingerprint) return false;
+        fingerprint = nextFingerprint;
+        hasFrame = true;
+        frameVersion++;
+        return true;
+    }
+
+    public long begin(long now) {
+        if (!canBegin(now)) return -1;
+        busy = true;
+        lastStart = now;
+        requestFrame = frameVersion;
+        return revision;
+    }
+
+    public boolean canBegin(long now){return hasFrame&&!busy&&now-lastStart>=MIN_SCAN_INTERVAL_MS&&(completedFrame!=frameVersion||now-lastStart>=FALLBACK_REFRESH_MS);}
+    /** A changed exclusion mask must not be mistaken for a changed game scene. */
+    public void rebase(long cleanFingerprint){if(hasFrame)fingerprint=cleanFingerprint;}
+
+    public boolean finish(long requestRevision) {
+        busy = false;
+        if (!hasFrame || requestRevision != revision) return false;
+        completedFrame = requestFrame;
+        return true;
+    }
+
+    public void refresh() { completedFrame = -1; revision++; }
+    public void failed() { busy = false; }
+    public boolean isBusy() { return busy; }
+    public boolean hasFrame() { return hasFrame; }
+    public void invalidate() { hasFrame = false; completedFrame = -1; revision++; }
+}
