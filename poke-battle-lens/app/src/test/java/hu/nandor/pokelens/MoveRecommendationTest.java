@@ -7,7 +7,7 @@ import java.util.*;
 public class MoveRecommendationTest {
     private Dex dex() throws Exception{
         String root="src/main/assets/";
-        return new Dex(Files.readString(Paths.get(root+"dex.json")),Files.readString(Paths.get(root+"ranking.json")));
+        return new Dex(new String(Files.readAllBytes(Paths.get(root+"dex.json")),java.nio.charset.StandardCharsets.UTF_8),new String(Files.readAllBytes(Paths.get(root+"ranking.json")),java.nio.charset.StandardCharsets.UTF_8));
     }
     @Test public void starmieComparisonIncludesStatsStabAccuracyAndShowsCloseAlternatives() throws Exception{
         Dex d=dex();MoveRecommendation.Result r=MoveRecommendation.rank(d,"swampert","starmie",Arrays.asList("mud-bomb","rock-slide","muddy-water","rock-smash"),9);
